@@ -1,0 +1,52 @@
+name: Sync operational data
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Data source to sync
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - square
+          - revolut
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+
+concurrency:
+  group: data-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+      SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
+      REVOLUT_CLIENT_ID: ${{ secrets.REVOLUT_CLIENT_ID }}
+      REVOLUT_PRIVATE_KEY: ${{ secrets.REVOLUT_PRIVATE_KEY }}
+      REVOLUT_REFRESH_TOKEN: ${{ secrets.REVOLUT_REFRESH_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run sync
+        run: python -m datahq.main "${{ github.event.inputs.source || 'all' }}"
