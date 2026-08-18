@@ -2,3 +2,4 @@ supabase>=2.18,<3
 httpx>=0.28,<1
 requests>=2.32,<3
 python-dotenv>=1.1,<2
+PyJWT[crypto]>=2.10,<3
