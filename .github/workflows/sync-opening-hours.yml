@@ -1,0 +1,46 @@
+name: Sync opening hours
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-opening-hours.yml"
+      - "src/datahq/opening_hours.py"
+      - "src/datahq/database.py"
+      - "requirements.txt"
+  schedule:
+    - cron: "17 4 * * *"
+
+concurrency:
+  group: opening-hours-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      OPENING_HOURS_WORKBOOK_URL: https://www.dropbox.com/scl/fi/w1dlfox32i6tnid2ryq4j/Actual_and_ProjectedHours2023_2026.xlsx?rlkey=flnn2glff51q399wno58mp77b&dl=1
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync opening-hours workbook
+        run: python -m datahq.opening_hours
