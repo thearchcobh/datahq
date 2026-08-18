@@ -101,6 +101,7 @@ def sync_accounts(access_token: str) -> tuple[int, int]:
 
     account_rows: list[dict[str, Any]] = []
     balance_rows: list[dict[str, Any]] = []
+    balance_date = now_utc().date().isoformat()
     for account in accounts:
         account_id = account.get("id")
         if not account_id:
@@ -121,14 +122,19 @@ def sync_accounts(access_token: str) -> tuple[int, int]:
             balance_rows.append(
                 {
                     "account_id": account_id,
+                    "balance_date": balance_date,
                     "balance": account.get("balance"),
                     "currency": account.get("currency"),
+                    "captured_at": now_utc().isoformat(),
                 }
             )
 
     written = upsert("revolut_accounts", account_rows)
     if balance_rows:
-        get_client().table("revolut_balances").insert(balance_rows).execute()
+        get_client().table("revolut_balances").upsert(
+            balance_rows,
+            on_conflict="account_id,balance_date",
+        ).execute()
         written += len(balance_rows)
     return len(accounts), written
 
