@@ -9,6 +9,8 @@ on:
       - ".github/workflows/sync-revolut.yml"
       - "src/datahq/revolut.py"
       - "src/datahq/database.py"
+      - "src/datahq/main.py"
+      - "src/datahq/retention.py"
       - "requirements.txt"
   schedule:
     - cron: "12 * * * *"
