@@ -181,7 +181,6 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
                 "total_tip_money_amount": tip.get("amount"),
                 "total_service_charge_money_amount": service.get("amount"),
                 "currency": total.get("currency"),
-                "raw_json": order,
             })
             for li in order.get("line_items") or []:
                 catalog_id = li.get("catalog_object_id")
@@ -209,7 +208,6 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
                     "total_money_amount": li_total.get("amount"),
                     "currency": li_total.get("currency") or base.get("currency"),
                     "note": li.get("note"),
-                    "raw_json": li,
                 })
         written += upsert("square_orders", order_rows)
         written += upsert("square_order_items", line_rows)
