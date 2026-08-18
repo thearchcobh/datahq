@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -23,20 +22,16 @@ def iso_utc(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def headers(token: str) -> dict[str, str]:
-    return {
-        "Authorization": f"Bearer {token}",
-        "Square-Version": SQUARE_VERSION,
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
-
-
 def request_json(method: str, path: str, token: str, *, params=None, body=None) -> dict[str, Any]:
     response = requests.request(
         method,
         f"{BASE_URL}{path}",
-        headers=headers(token),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Square-Version": SQUARE_VERSION,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
         params=params,
         json=body,
         timeout=120,
@@ -46,28 +41,49 @@ def request_json(method: str, path: str, token: str, *, params=None, body=None) 
     return response.json()
 
 
-def chunks(rows: list[dict[str, Any]], size: int = 500):
-    for i in range(0, len(rows), size):
-        yield rows[i : i + size]
-
-
-def upsert(table: str, rows: list[dict[str, Any]], *, on_conflict: str | None = None) -> int:
+def upsert(table: str, rows: list[dict[str, Any]], size: int = 500) -> int:
     if not rows:
         return 0
     client = get_client()
-    for batch in chunks(rows):
-        query = client.table(table).upsert(batch, on_conflict=on_conflict) if on_conflict else client.table(table).upsert(batch)
-        query.execute()
+    for i in range(0, len(rows), size):
+        client.table(table).upsert(rows[i : i + size]).execute()
     return len(rows)
+
+
+def sync_team_members(token: str, location_id: str) -> tuple[int, int]:
+    cursor = None
+    read = written = 0
+    while True:
+        body: dict[str, Any] = {
+            "query": {"filter": {"location_ids": [location_id]}},
+            "limit": 200,
+        }
+        if cursor:
+            body["cursor"] = cursor
+        data = request_json("POST", "/v2/team-members/search", token, body=body)
+        members = data.get("team_members") or []
+        read += len(members)
+        rows = [{
+            "id": m.get("id"),
+            "given_name": m.get("given_name"),
+            "family_name": m.get("family_name"),
+            "status": m.get("status"),
+            "created_at": m.get("created_at"),
+            "updated_at": m.get("updated_at"),
+            "raw_json": m,
+        } for m in members if m.get("id")]
+        written += upsert("square_team_members", rows)
+        cursor = data.get("cursor")
+        if not cursor:
+            return read, written
 
 
 def sync_catalog(token: str) -> tuple[int, int]:
     cursor = None
-    read = written = 0
+    read = 0
     categories: list[dict[str, Any]] = []
     items: list[dict[str, Any]] = []
     variations: list[dict[str, Any]] = []
-
     while True:
         params = {"types": "CATEGORY,ITEM,ITEM_VARIATION"}
         if cursor:
@@ -75,7 +91,6 @@ def sync_catalog(token: str) -> tuple[int, int]:
         data = request_json("GET", "/v2/catalog/list", token, params=params)
         objects = data.get("objects") or []
         read += len(objects)
-
         for obj in objects:
             common = {
                 "id": obj.get("id"),
@@ -90,7 +105,8 @@ def sync_catalog(token: str) -> tuple[int, int]:
                 d = obj.get("item_data") or {}
                 category_id = d.get("category_id")
                 if not category_id and d.get("categories"):
-                    category_id = (d["categories"][0] or {}).get("id") or (d["categories"][0] or {}).get("category_id")
+                    first = d["categories"][0] or {}
+                    category_id = first.get("id") or first.get("category_id")
                 items.append({**common, "type": "ITEM", "name": d.get("name"), "category_id": category_id})
             elif obj.get("type") == "ITEM_VARIATION":
                 d = obj.get("item_variation_data") or {}
@@ -102,12 +118,10 @@ def sync_catalog(token: str) -> tuple[int, int]:
                     "price_amount": money.get("amount"),
                     "price_currency": money.get("currency"),
                 })
-
         cursor = data.get("cursor")
         if not cursor:
             break
-
-    written += upsert("square_catalogue_categories", categories)
+    written = upsert("square_catalogue_categories", categories)
     written += upsert("square_catalogue_items", items)
     written += upsert("square_catalogue_variations", variations)
     return read, written
@@ -121,7 +135,6 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
     end_at = now_utc()
     cursor = None
     read = written = 0
-
     while True:
         body: dict[str, Any] = {
             "location_ids": [location_id],
@@ -142,7 +155,6 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
         read += len(orders)
         order_rows: list[dict[str, Any]] = []
         line_rows: list[dict[str, Any]] = []
-
         for order in orders:
             oid = order.get("id")
             if not oid:
@@ -199,23 +211,26 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
                     "note": li.get("note"),
                     "raw_json": li,
                 })
-
         written += upsert("square_orders", order_rows)
         written += upsert("square_order_items", line_rows)
         cursor = data.get("cursor")
         if not cursor:
             break
-
     set_sync_state("square_orders")
     return read, written
 
 
 def sync_timecards(token: str, location_id: str) -> tuple[int, int]:
-    start = now_utc() - timedelta(days=int(os.getenv("SQUARE_TIMECARDS_LOOKBACK_DAYS", "30")))
+    state = get_sync_state("square_timecards") or {}
+    last = state.get("last_synced_at")
+    if last:
+        last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        start = last_dt - timedelta(days=int(os.getenv("SQUARE_TIMECARDS_LOOKBACK_DAYS", "30")))
+    else:
+        start = INITIAL_START
     end = now_utc() + timedelta(days=1)
     cursor = None
     read = written = 0
-
     while True:
         body: dict[str, Any] = {
             "query": {"filter": {"location_ids": [location_id], "start": {"start_at": iso_utc(start), "end_at": iso_utc(end)}}},
@@ -230,25 +245,27 @@ def sync_timecards(token: str, location_id: str) -> tuple[int, int]:
         for card in cards:
             wage = card.get("wage") or {}
             rate = wage.get("hourly_rate") or {}
-            rows.append({
-                "id": card.get("id"),
-                "team_member_id": card.get("team_member_id"),
-                "location_id": card.get("location_id"),
-                "start_at": card.get("start_at"),
-                "end_at": card.get("end_at"),
-                "status": card.get("status"),
-                "job_id": wage.get("job_id"),
-                "job_title": wage.get("title"),
-                "hourly_rate_amount": rate.get("amount"),
-                "currency": rate.get("currency"),
-                "created_at": card.get("created_at"),
-                "updated_at": card.get("updated_at"),
-                "raw_json": card,
-            })
+            if card.get("id"):
+                rows.append({
+                    "id": card.get("id"),
+                    "team_member_id": card.get("team_member_id"),
+                    "location_id": card.get("location_id"),
+                    "start_at": card.get("start_at"),
+                    "end_at": card.get("end_at"),
+                    "status": card.get("status"),
+                    "job_id": wage.get("job_id"),
+                    "job_title": wage.get("title"),
+                    "hourly_rate_amount": rate.get("amount"),
+                    "currency": rate.get("currency"),
+                    "created_at": card.get("created_at"),
+                    "updated_at": card.get("updated_at"),
+                    "raw_json": card,
+                })
         written += upsert("square_timecards", rows)
         cursor = data.get("cursor")
         if not cursor:
             break
+    set_sync_state("square_timecards")
     return read, written
 
 
@@ -257,11 +274,14 @@ def sync_scheduled_shifts(token: str, location_id: str) -> tuple[int, int]:
     end = now_utc() + timedelta(days=21)
     cursor = None
     read = written = 0
-
     while True:
         body: dict[str, Any] = {
-            "query": {"filter": {"location_ids": [location_id], "start": {"start_at": iso_utc(start), "end_at": iso_utc(end)}, "scheduled_shift_statuses": ["PUBLISHED"]}},
-            "limit": 200,
+            "query": {"filter": {
+                "location_ids": [location_id],
+                "start": {"start_at": iso_utc(start), "end_at": iso_utc(end)},
+                "scheduled_shift_statuses": ["PUBLISHED"],
+            }},
+            "limit": 50,
         }
         if cursor:
             body["cursor"] = cursor
@@ -271,25 +291,25 @@ def sync_scheduled_shifts(token: str, location_id: str) -> tuple[int, int]:
         rows = []
         for shift in shifts:
             d = shift.get("published_shift_details") or {}
-            rows.append({
-                "id": shift.get("id"),
-                "team_member_id": d.get("team_member_id"),
-                "location_id": d.get("location_id") or location_id,
-                "job_id": d.get("job_id"),
-                "start_at": d.get("start_at"),
-                "end_at": d.get("end_at"),
-                "notes": d.get("notes"),
-                "status": "PUBLISHED",
-                "version": shift.get("version"),
-                "created_at": shift.get("created_at"),
-                "updated_at": shift.get("updated_at"),
-                "raw_json": shift,
-            })
+            if shift.get("id") and d:
+                rows.append({
+                    "id": shift.get("id"),
+                    "team_member_id": d.get("team_member_id"),
+                    "location_id": d.get("location_id") or location_id,
+                    "job_id": d.get("job_id"),
+                    "start_at": d.get("start_at"),
+                    "end_at": d.get("end_at"),
+                    "notes": d.get("notes"),
+                    "status": "PUBLISHED",
+                    "version": shift.get("version"),
+                    "created_at": shift.get("created_at"),
+                    "updated_at": shift.get("updated_at"),
+                    "raw_json": shift,
+                })
         written += upsert("square_scheduled_shifts", rows)
         cursor = data.get("cursor")
         if not cursor:
-            break
-    return read, written
+            return read, written
 
 
 def sync_square() -> None:
@@ -300,14 +320,13 @@ def sync_square() -> None:
     run_id = start_sync("square", {"location_id": location_id})
     read = written = 0
     try:
-        for fn in (sync_catalog,):
-            r, w = fn(token)
-            read += r
-            written += w
+        r, w = sync_team_members(token, location_id)
+        read += r; written += w
+        r, w = sync_catalog(token)
+        read += r; written += w
         for fn in (sync_orders, sync_timecards, sync_scheduled_shifts):
             r, w = fn(token, location_id)
-            read += r
-            written += w
+            read += r; written += w
         set_sync_state("square")
         finish_sync(run_id, status="success", records_read=read, records_written=written)
     except Exception as exc:
