@@ -12,11 +12,15 @@ from .database import finish_sync, get_client, get_sync_state, set_sync_state, s
 BASE_URL = "https://b2b.revolut.com/api/1.0"
 DEFAULT_CLIENT_ID = "spJWSodLx2C09lD6xvxMwJbkgKqpb8d5x2kC4KYORGA"
 DEFAULT_ISSUER = "example.com"
-INITIAL_START = datetime(2023, 1, 1, tzinfo=timezone.utc)
 
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def retention_start() -> datetime:
+    now = now_utc()
+    return datetime(now.year - 1, 1, 1, tzinfo=timezone.utc)
 
 
 def iso_utc(dt: datetime) -> str:
@@ -27,7 +31,6 @@ def get_private_key() -> str:
     key = os.environ.get("REVOLUT_PRIVATE_KEY")
     if not key:
         raise RuntimeError("REVOLUT_PRIVATE_KEY is not configured")
-    # Supports either a real multiline GitHub secret or a value containing literal \\n.
     return key.replace("\\n", "\n")
 
 
@@ -112,7 +115,6 @@ def sync_accounts(access_token: str) -> tuple[int, int]:
                 "public": account.get("public"),
                 "created_at": account.get("created_at"),
                 "updated_at": account.get("updated_at"),
-                "raw_json": account,
             }
         )
         if account.get("balance") is not None and account.get("currency"):
@@ -121,7 +123,6 @@ def sync_accounts(access_token: str) -> tuple[int, int]:
                     "account_id": account_id,
                     "balance": account.get("balance"),
                     "currency": account.get("currency"),
-                    "raw_json": account,
                 }
             )
 
@@ -135,12 +136,14 @@ def sync_accounts(access_token: str) -> tuple[int, int]:
 def sync_transactions(access_token: str) -> tuple[int, int]:
     state = get_sync_state("revolut_transactions") or {}
     last = state.get("last_synced_at")
+    earliest = retention_start()
     if last:
         last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
-        start = last_dt - timedelta(days=int(os.getenv("REVOLUT_TRANSACTION_LOOKBACK_DAYS", "14")))
+        start = max(last_dt - timedelta(days=int(os.getenv("REVOLUT_TRANSACTION_LOOKBACK_DAYS", "14"))), earliest)
     else:
         initial = os.getenv("REVOLUT_INITIAL_START")
-        start = datetime.fromisoformat(initial.replace("Z", "+00:00")) if initial else INITIAL_START
+        requested = datetime.fromisoformat(initial.replace("Z", "+00:00")) if initial else earliest
+        start = max(requested, earliest)
 
     page_to = now_utc()
     read = written = 0
@@ -187,11 +190,9 @@ def sync_transactions(access_token: str) -> tuple[int, int]:
                     "merchant_category_code": merchant.get("category_code"),
                     "merchant_country": merchant.get("country"),
                     "card_id": card.get("id"),
-                    # Convenience fields only. Full accounting detail is in revolut_transaction_legs.
                     "amount": primary_leg.get("amount"),
                     "currency": primary_leg.get("currency"),
                     "account_id": primary_leg.get("account_id"),
-                    "raw_json": transaction,
                 }
             )
 
@@ -210,7 +211,6 @@ def sync_transactions(access_token: str) -> tuple[int, int]:
                         "description": leg.get("description"),
                         "balance": leg.get("balance"),
                         "counterparty_json": leg.get("counterparty"),
-                        "raw_json": leg,
                     }
                 )
 
