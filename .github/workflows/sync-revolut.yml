@@ -1,0 +1,49 @@
+name: Sync Revolut data
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-revolut.yml"
+      - "src/datahq/revolut.py"
+      - "src/datahq/database.py"
+      - "requirements.txt"
+  schedule:
+    - cron: "12 * * * *"
+
+concurrency:
+  group: revolut-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      REVOLUT_PRIVATE_KEY: ${{ secrets.REVOLUT_PRIVATE_KEY }}
+      REVOLUT_REFRESH_TOKEN: ${{ secrets.REVOLUT_REFRESH_TOKEN }}
+      REVOLUT_CLIENT_ID: spJWSodLx2C09lD6xvxMwJbkgKqpb8d5x2kC4KYORGA
+      REVOLUT_ISSUER: example.com
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync Revolut
+        run: python -m datahq.main revolut
