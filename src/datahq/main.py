@@ -4,6 +4,7 @@ import argparse
 
 from dotenv import load_dotenv
 
+from .retention import prune_source
 from .revolut import sync_revolut
 from .square import sync_square
 
@@ -17,8 +18,10 @@ def main() -> None:
 
     if args.source in {"square", "all"}:
         sync_square()
+        prune_source("square")
     if args.source in {"revolut", "all"}:
         sync_revolut()
+        prune_source("revolut")
 
 
 if __name__ == "__main__":
