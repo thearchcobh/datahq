@@ -6,12 +6,12 @@ on:
       source:
         description: Data source to sync
         required: true
-        default: all
+        default: square
         type: choice
         options:
-          - all
           - square
           - revolut
+          - all
   schedule:
     - cron: "7,22,37,52 * * * *"
 
@@ -27,7 +27,7 @@ jobs:
       contents: read
     env:
       PYTHONPATH: src
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
       SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
@@ -49,4 +49,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run sync
-        run: python -m datahq.main "${{ github.event.inputs.source || 'all' }}"
+        run: python -m datahq.main "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source || 'square' }}"
