@@ -4,3 +4,4 @@ requests>=2.32,<3
 python-dotenv>=1.1,<2
 PyJWT[crypto]>=2.10,<3
 openpyxl>=3.1,<4
+icalendar>=5,<7
