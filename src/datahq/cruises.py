@@ -59,14 +59,24 @@ def _parse_component(component) -> dict | None:
     passengers = int(pax_digits) if pax_digits else None
 
     marine_traffic_url = _description_line(description, "🔗")
+
+    # The calendar may contain either the original IMO-based vessel-details URL
+    # or the cached MarineTraffic shipid route-forecast URL. Keep IMO stable by
+    # falling back to the UID, whose leading token is the IMO for known vessels.
     imo_match = re.search(r"imo[:/]?(\d{7})", marine_traffic_url, flags=re.IGNORECASE)
+    if not imo_match:
+        imo_match = re.match(r"(\d{7})-", uid)
     imo = imo_match.group(1) if imo_match else None
+
+    shipid_match = re.search(r"shipid[:/](\d+)", marine_traffic_url, flags=re.IGNORECASE)
+    marinetraffic_shipid = shipid_match.group(1) if shipid_match else None
 
     return {
         "uid": uid,
         "vessel": vessel or "Unknown",
         "cruise_line": cruise_line or None,
         "imo": imo,
+        "marinetraffic_shipid": marinetraffic_shipid,
         "port": location or None,
         "arrival": arrival.astimezone(timezone.utc).isoformat(),
         "departure": departure.astimezone(timezone.utc).isoformat(),
