@@ -43,3 +43,5 @@ jobs:
 
       - name: Sync cruise calls
         run: python -m datahq.main cruises
+
+# Cruise calls are retained historically in Supabase; future removals are marked inactive.
