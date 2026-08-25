@@ -1,0 +1,37 @@
+name: Test cruise ingestion
+
+on:
+  push:
+    branches:
+      - chatgpt/add-cruise-data-20260825
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile src/datahq/cruises.py src/datahq/main.py
+      - name: Parse live cruise feed without writing
+        run: |
+          python - <<'PY'
+          import requests
+          from datahq.cruises import FEED_URL, _parse_feed
+          r = requests.get(FEED_URL, timeout=30)
+          r.raise_for_status()
+          rows = _parse_feed(r.content)
+          assert len(rows) > 10, len(rows)
+          assert any(row.get('port') == 'Cobh' for row in rows)
+          assert all(row.get('uid') and row.get('vessel') for row in rows)
+          print('Parsed cruise calls:', len(rows))
+          PY
