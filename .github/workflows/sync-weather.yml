@@ -1,0 +1,92 @@
+name: Sync weather
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Weather sync mode
+        required: true
+        default: both
+        type: choice
+        options:
+          - daily
+          - era5
+          - both
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/sync-weather.yml"
+      - "src/datahq/weather.py"
+      - "src/datahq/database.py"
+      - "requirements.txt"
+  schedule:
+    - cron: "43 4 * * *"
+    - cron: "23 5 8 * *"
+
+concurrency:
+  group: weather-sync
+  cancel-in-progress: false
+
+jobs:
+  era5:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'schedule' && github.event.schedule == '23 5 8 * *') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.mode == 'era5' || inputs.mode == 'both'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Reconcile ERA5 history
+        run: python -m datahq.weather era5
+
+  daily:
+    needs: era5
+    if: >-
+      always() &&
+      (github.event_name == 'push' ||
+      (github.event_name == 'schedule' && github.event.schedule == '43 4 * * *') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.mode == 'daily' || inputs.mode == 'both')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh recent weather and forecast
+        run: python -m datahq.weather daily
