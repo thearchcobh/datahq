@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Iterable
 
@@ -14,6 +15,7 @@ START_DATE = date(2023, 5, 23)
 FORECAST_DAYS = 15
 OPEN_METEO_MAX_PAST_DAYS = 92
 ERA5_SAFE_LAG_DAYS = 6
+ERA5_CHUNK_DAYS = 90
 BATCH_SIZE = 500
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -42,6 +44,34 @@ def _number(value):
     if value is None:
         return None
     return float(value)
+
+
+def _get_json(url: str, params: dict, *, timeout: int = 75, attempts: int = 4) -> dict:
+    """GET JSON with bounded retry/backoff for transient weather API failures."""
+    last_exc: Exception | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.get(
+                url,
+                params=params,
+                timeout=timeout,
+                headers={"User-Agent": "thearchcobh-datahq/1.0"},
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as exc:
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            delay = min(15, 2**attempt)
+            print(
+                f"[WARN] Weather API request failed on attempt {attempt}/{attempts}: "
+                f"{exc}. Retrying in {delay}s..."
+            )
+            time.sleep(delay)
+
+    raise RuntimeError("Weather API request failed") from last_exc
 
 
 def _latest_era5_time() -> datetime | None:
@@ -153,9 +183,9 @@ def sync_open_meteo() -> None:
     records_written = 0
 
     try:
-        response = requests.get(
+        payload = _get_json(
             FORECAST_URL,
-            params={
+            {
                 "latitude": LAT,
                 "longitude": LON,
                 "timezone": "UTC",
@@ -165,12 +195,10 @@ def sync_open_meteo() -> None:
                 "forecast_days": FORECAST_DAYS,
             },
             timeout=60,
-            headers={"User-Agent": "thearchcobh-datahq/1.0"},
         )
-        response.raise_for_status()
         fetched_at = utc_now_iso()
         rows = _rows_from_open_meteo(
-            response.json(),
+            payload,
             source="open_meteo",
             fetched_at=fetched_at,
             forecast_from=current_hour,
@@ -213,7 +241,7 @@ def sync_open_meteo() -> None:
         raise
 
 
-def _iter_date_chunks(start: date, end: date, max_days: int = 366):
+def _iter_date_chunks(start: date, end: date, max_days: int = ERA5_CHUNK_DAYS):
     cursor = start
     while cursor <= end:
         chunk_end = min(end, cursor + timedelta(days=max_days - 1))
@@ -234,6 +262,7 @@ def sync_era5() -> None:
             "model": "era5",
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
+            "chunk_days": ERA5_CHUNK_DAYS,
             "previous_era5_max": era5_max.isoformat() if era5_max else None,
         },
     )
@@ -249,9 +278,9 @@ def sync_era5() -> None:
 
         fetched_at = utc_now_iso()
         for chunk_start, chunk_end in _iter_date_chunks(start, end):
-            response = requests.get(
+            payload = _get_json(
                 ARCHIVE_URL,
-                params={
+                {
                     "latitude": LAT,
                     "longitude": LON,
                     "start_date": chunk_start.isoformat(),
@@ -262,12 +291,10 @@ def sync_era5() -> None:
                     "wind_speed_unit": "ms",
                     "hourly": HOURLY_FIELDS,
                 },
-                timeout=90,
-                headers={"User-Agent": "thearchcobh-datahq/1.0"},
+                timeout=75,
             )
-            response.raise_for_status()
             rows = _rows_from_open_meteo(
-                response.json(),
+                payload,
                 source="era5",
                 fetched_at=fetched_at,
                 forecast_from=None,
