@@ -12,6 +12,7 @@ BASE_URL = "https://connect.squareup.com"
 SQUARE_VERSION = os.getenv("SQUARE_API_VERSION", "2026-07-15")
 DEFAULT_LOCATION_ID = "L05Y6CVDJJN86"
 INITIAL_START = datetime(2023, 1, 1, tzinfo=timezone.utc)
+PAYMENTS_INITIAL_START = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
 
 def now_utc() -> datetime:
@@ -218,6 +219,141 @@ def sync_orders(token: str, location_id: str) -> tuple[int, int]:
     return read, written
 
 
+def _payment_row(payment: dict[str, Any], synced_at: str) -> dict[str, Any] | None:
+    payment_id = payment.get("id")
+    if not payment_id:
+        return None
+
+    amount = payment.get("amount_money") or {}
+    tip = payment.get("tip_money") or {}
+    total = payment.get("total_money") or {}
+    refunded = payment.get("refunded_money") or {}
+    card_details = payment.get("card_details") or {}
+    card = card_details.get("card") or {}
+    application = payment.get("application_details") or {}
+
+    fee_amount = 0
+    for fee in payment.get("processing_fee") or []:
+        fee_money = (fee or {}).get("amount_money") or {}
+        fee_amount += int(fee_money.get("amount") or 0)
+
+    currency = (
+        total.get("currency")
+        or amount.get("currency")
+        or refunded.get("currency")
+    )
+
+    return {
+        "id": payment_id,
+        "order_id": payment.get("order_id"),
+        "location_id": payment.get("location_id"),
+        "team_member_id": payment.get("team_member_id"),
+        "employee_id": payment.get("employee_id"),
+        "status": payment.get("status"),
+        "source_type": payment.get("source_type"),
+        "created_at": payment.get("created_at"),
+        "updated_at": payment.get("updated_at"),
+        "amount_money_amount": amount.get("amount"),
+        "tip_money_amount": tip.get("amount"),
+        "total_money_amount": total.get("amount"),
+        "refunded_money_amount": refunded.get("amount"),
+        "processing_fee_amount": fee_amount,
+        "currency": currency,
+        "card_brand": card.get("card_brand"),
+        "card_type": card.get("card_type"),
+        "entry_method": card_details.get("entry_method"),
+        "application_product": application.get("square_product"),
+        "receipt_number": payment.get("receipt_number"),
+        "raw_json": payment,
+        "synced_at": synced_at,
+    }
+
+
+def _sync_payments_window(
+    token: str,
+    location_id: str,
+    *,
+    params: dict[str, Any],
+) -> tuple[int, int]:
+    cursor = None
+    read = written = 0
+    synced_at = iso_utc(now_utc())
+
+    while True:
+        request_params = {
+            "location_id": location_id,
+            "limit": 100,
+            **params,
+        }
+        if cursor:
+            request_params["cursor"] = cursor
+
+        data = request_json("GET", "/v2/payments", token, params=request_params)
+        payments = data.get("payments") or []
+        read += len(payments)
+        rows = []
+        for payment in payments:
+            row = _payment_row(payment, synced_at)
+            if row:
+                rows.append(row)
+        written += upsert("square_payments", rows)
+
+        cursor = data.get("cursor")
+        if not cursor:
+            return read, written
+
+
+def sync_payments(token: str, location_id: str) -> tuple[int, int]:
+    state = get_sync_state("square_payments") or {}
+    last = state.get("last_synced_at")
+    end_at = now_utc()
+    read = written = 0
+
+    if not last:
+        # First load: retrieve the full period that overlaps our retained order history.
+        # Chunking keeps API responses/pagination manageable and makes a failed first
+        # backfill cheap to retry; upserts make overlapping chunk boundaries harmless.
+        chunk_start = PAYMENTS_INITIAL_START
+        chunk_days = int(os.getenv("SQUARE_PAYMENTS_BACKFILL_CHUNK_DAYS", "180"))
+        while chunk_start < end_at:
+            chunk_end = min(end_at, chunk_start + timedelta(days=chunk_days))
+            r, w = _sync_payments_window(
+                token,
+                location_id,
+                params={
+                    "begin_time": iso_utc(chunk_start),
+                    "end_time": iso_utc(chunk_end),
+                    "sort_field": "CREATED_AT",
+                    "sort_order": "ASC",
+                },
+            )
+            read += r
+            written += w
+            chunk_start = chunk_end
+    else:
+        # Normal runs follow Payment.updated_at rather than created_at so changes to
+        # older payments (notably refunds) are refreshed. A short overlap protects
+        # against eventual consistency and boundary timing without a full re-download.
+        last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        lookback_days = int(os.getenv("SQUARE_PAYMENTS_LOOKBACK_DAYS", "14"))
+        start_at = last_dt - timedelta(days=lookback_days)
+        r, w = _sync_payments_window(
+            token,
+            location_id,
+            params={
+                "updated_at_begin_time": iso_utc(start_at),
+                "updated_at_end_time": iso_utc(end_at),
+                "sort_field": "UPDATED_AT",
+                "sort_order": "ASC",
+            },
+        )
+        read += r
+        written += w
+
+    set_sync_state("square_payments")
+    return read, written
+
+
 def sync_timecards(token: str, location_id: str) -> tuple[int, int]:
     state = get_sync_state("square_timecards") or {}
     last = state.get("last_synced_at")
@@ -322,7 +458,7 @@ def sync_square() -> None:
         read += r; written += w
         r, w = sync_catalog(token)
         read += r; written += w
-        for fn in (sync_orders, sync_timecards, sync_scheduled_shifts):
+        for fn in (sync_orders, sync_payments, sync_timecards, sync_scheduled_shifts):
             r, w = fn(token, location_id)
             read += r; written += w
         set_sync_state("square")
