@@ -237,6 +237,80 @@ def sync_transactions(access_token: str) -> tuple[int, int]:
     return read, written
 
 
+def sync_expenses(access_token: str) -> tuple[int, int]:
+    state = get_sync_state("revolut_expenses") or {}
+    last = state.get("last_synced_at")
+    earliest = retention_start()
+    if last:
+        last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        start = max(last_dt - timedelta(days=int(os.getenv("REVOLUT_EXPENSE_LOOKBACK_DAYS", "120"))), earliest)
+    else:
+        initial = os.getenv("REVOLUT_INITIAL_START")
+        requested = datetime.fromisoformat(initial.replace("Z", "+00:00")) if initial else earliest
+        start = max(requested, earliest)
+
+    page_to = now_utc()
+    read = written = 0
+
+    while True:
+        expenses = request_json(
+            "/expenses",
+            access_token,
+            params={"from": iso_utc(start), "to": iso_utc(page_to), "count": 500},
+        )
+        if not isinstance(expenses, list):
+            raise RuntimeError("Unexpected Revolut /expenses response")
+        if not expenses:
+            break
+
+        read += len(expenses)
+        rows: list[dict[str, Any]] = []
+        for expense in expenses:
+            expense_id = expense.get("id")
+            expense_date = expense.get("expense_date")
+            if not expense_id or not expense_date:
+                continue
+            spent = expense.get("spent_amount") or {}
+            receipt_ids = expense.get("receipt_ids") or []
+            rows.append(
+                {
+                    "id": expense_id,
+                    "state": expense.get("state"),
+                    "transaction_type": expense.get("transaction_type"),
+                    "description": expense.get("description"),
+                    "submitted_at": expense.get("submitted_at"),
+                    "completed_at": expense.get("completed_at"),
+                    "payer": expense.get("payer"),
+                    "merchant": expense.get("merchant"),
+                    "transaction_id": expense.get("transaction_id"),
+                    "expense_date": expense_date,
+                    "labels": expense.get("labels") or {},
+                    "splits": expense.get("splits") or [],
+                    "receipt_ids": receipt_ids,
+                    "spent_amount": spent.get("amount"),
+                    "spent_currency": spent.get("currency"),
+                    "synced_at": now_utc().isoformat(),
+                    "raw_json": expense,
+                }
+            )
+        written += upsert("revolut_expenses", rows)
+
+        if len(expenses) < 500:
+            break
+        last_expense_date = expenses[-1].get("expense_date")
+        if not last_expense_date:
+            raise RuntimeError("Revolut expense pagination item missing expense_date")
+        next_page_to = datetime.fromisoformat(last_expense_date.replace("Z", "+00:00")) - timedelta(microseconds=1)
+        if next_page_to >= page_to:
+            raise RuntimeError("Revolut expense pagination did not move backwards")
+        page_to = next_page_to
+        if page_to < start:
+            break
+
+    set_sync_state("revolut_expenses")
+    return read, written
+
+
 def sync_revolut() -> None:
     run_id = start_sync("revolut")
     read = written = 0
@@ -246,6 +320,9 @@ def sync_revolut() -> None:
         read += r
         written += w
         r, w = sync_transactions(access_token)
+        read += r
+        written += w
+        r, w = sync_expenses(access_token)
         read += r
         written += w
         set_sync_state("revolut")
