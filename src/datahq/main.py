@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from .cruises import sync_cruises
 from .retention import prune_source
 from .revolut import sync_revolut
-from .square import sync_square
+from .square_runner import sync_square
 
 
 def main() -> None:
