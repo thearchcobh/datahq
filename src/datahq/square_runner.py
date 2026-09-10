@@ -4,7 +4,7 @@ import os
 from datetime import timedelta
 from typing import Any
 
-from .database import finish_sync, set_sync_state, start_sync
+from .database import finish_sync, get_client, set_sync_state, start_sync
 from .square import (
     DEFAULT_LOCATION_ID,
     iso_utc,
@@ -81,7 +81,24 @@ def sync_scheduled_shifts(token: str, location_id: str) -> tuple[int, int]:
         written += upsert("square_scheduled_shifts", rows)
         cursor = data.get("cursor")
         if not cursor:
-            return read, written
+            break
+
+    # Square can create a new scheduled-shift ID when a draft shift is edited or
+    # replaced. Upsert alone therefore leaves the old row behind indefinitely.
+    # Only clean up after every page has been fetched successfully: rows in this
+    # sync window that were not seen in the current snapshot are no longer active.
+    (
+        get_client()
+        .table("square_scheduled_shifts")
+        .delete()
+        .eq("location_id", location_id)
+        .gte("start_at", iso_utc(start))
+        .lt("start_at", iso_utc(end))
+        .neq("synced_at", synced_at)
+        .execute()
+    )
+
+    return read, written
 
 
 def sync_square() -> None:
