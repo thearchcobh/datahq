@@ -21,7 +21,7 @@ from .square import (
 
 def sync_scheduled_shifts(token: str, location_id: str) -> tuple[int, int]:
     start = now_utc() - timedelta(days=7)
-    end = now_utc() + timedelta(days=120)
+    end = now_utc() + timedelta(days=240)
     cursor = None
     read = written = 0
     synced_at = iso_utc(now_utc())
