@@ -19,10 +19,14 @@
   #arch-menu-app .arch-tabs{
     display:flex;
     gap:0;
-    overflow-x:auto;
+    overflow-x:scroll;
+    overflow-y:hidden;
     scrollbar-width:none;
-    padding:0 34px 0 0;
+    padding:0 38px;
     scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-x;
+    overscroll-behavior-x:contain;
   }
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
   #arch-menu-app .arch-tab{
@@ -61,39 +65,37 @@
   }
   #arch-menu-app .arch-tab:first-child.is-active::before{left:2px}
 
-  #arch-menu-app .arch-tabs-wrap::after,
-  #arch-menu-app .arch-tabs-wrap::before{
+  #arch-menu-app .arch-scroll-arrow{
     position:absolute;
     top:0;
     bottom:1px;
-    width:46px;
-    display:flex;
-    align-items:center;
-    font-size:22px;
-    font-weight:400;
+    z-index:8;
+    width:40px;
+    border:0;
+    padding:0;
     color:var(--ink);
-    pointer-events:none;
-    transition:opacity .18s ease;
+    font:400 24px/1 Georgia,'Times New Roman',serif;
+    cursor:pointer;
+    transition:opacity .18s ease,visibility .18s ease;
   }
-  #arch-menu-app .arch-tabs-wrap::after{
-    content:"›";
-    right:0;
-    justify-content:flex-end;
-    padding-right:3px;
-    background:linear-gradient(to right,rgba(251,250,247,0),rgba(251,250,247,.96) 55%);
-    opacity:1;
-  }
-  #arch-menu-app .arch-tabs-wrap.is-at-end::after{opacity:0}
-  #arch-menu-app .arch-tabs-wrap::before{
-    content:"‹";
+  #arch-menu-app .arch-scroll-left{
     left:0;
-    justify-content:flex-start;
-    padding-left:3px;
-    background:linear-gradient(to left,rgba(251,250,247,0),rgba(251,250,247,.96) 55%);
-    opacity:0;
-    z-index:2;
+    text-align:left;
+    padding-left:2px;
+    background:linear-gradient(to left,rgba(251,250,247,0),rgba(251,250,247,.98) 58%);
   }
-  #arch-menu-app .arch-tabs-wrap.has-left-scroll::before{opacity:1}
+  #arch-menu-app .arch-scroll-right{
+    right:0;
+    text-align:right;
+    padding-right:2px;
+    background:linear-gradient(to right,rgba(251,250,247,0),rgba(251,250,247,.98) 58%);
+  }
+  #arch-menu-app .arch-tabs-wrap.is-at-start .arch-scroll-left,
+  #arch-menu-app .arch-tabs-wrap.is-at-end .arch-scroll-right{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
 
   #arch-menu-app .arch-panel{display:none;padding-top:28px}
   #arch-menu-app .arch-panel.is-active{display:block}
@@ -122,7 +124,7 @@
     font-size:9px;
     letter-spacing:.04em;
     color:var(--muted);
-    cursor:help;
+    cursor:default;
   }
   #arch-menu-app .arch-note{font-size:12px;line-height:1.45;color:var(--muted);margin:18px 0 0}
 
@@ -245,9 +247,13 @@
       ['soft','Best of the Rest']
     ];
 
-    var nav='<div class="arch-tabs-wrap"><div class="arch-tabs">'+tabs.map(function(t,i){
-      return '<button type="button" class="arch-tab'+(i===0?' is-active':'')+'" data-tab="'+t[0]+'">'+esc(t[1])+'</button>';
-    }).join('')+'</div></div>';
+    var nav='<div class="arch-tabs-wrap is-at-start">'+
+      '<button type="button" class="arch-scroll-arrow arch-scroll-left" aria-label="Scroll menu sections left">‹</button>'+
+      '<div class="arch-tabs">'+tabs.map(function(t,i){
+        return '<button type="button" class="arch-tab'+(i===0?' is-active':'')+'" data-tab="'+t[0]+'">'+esc(t[1])+'</button>';
+      }).join('')+'</div>'+
+      '<button type="button" class="arch-scroll-arrow arch-scroll-right" aria-label="Scroll menu sections right">›</button>'+
+      '</div>';
 
     var legend='<p class="arch-note">O = Organic · HVE = High Environmental Value · Bio = Biodynamic · V = Vegan</p>';
 
@@ -265,6 +271,8 @@
 
     var tabsWrap=root.querySelector('.arch-tabs-wrap');
     var tabsScroller=root.querySelector('.arch-tabs');
+    var scrollLeftButton=root.querySelector('.arch-scroll-left');
+    var scrollRightButton=root.querySelector('.arch-scroll-right');
     var buttons=[].slice.call(root.querySelectorAll('.arch-tab'));
     var panelEls=[].slice.call(root.querySelectorAll('.arch-panel'));
 
@@ -272,7 +280,7 @@
       if(!tabsWrap||!tabsScroller) return;
       var maxScroll=Math.max(0,tabsScroller.scrollWidth-tabsScroller.clientWidth);
       var hasOverflow=maxScroll>4;
-      tabsWrap.classList.toggle('has-left-scroll',hasOverflow&&tabsScroller.scrollLeft>4);
+      tabsWrap.classList.toggle('is-at-start',!hasOverflow||tabsScroller.scrollLeft<=4);
       tabsWrap.classList.toggle('is-at-end',!hasOverflow||tabsScroller.scrollLeft>=maxScroll-4);
     }
 
@@ -293,6 +301,16 @@
 
     if(tabsScroller){
       tabsScroller.addEventListener('scroll',updateScrollCue,{passive:true});
+    }
+    if(scrollLeftButton){
+      scrollLeftButton.addEventListener('click',function(){
+        tabsScroller.scrollBy({left:-Math.max(180,tabsScroller.clientWidth*.65),behavior:'smooth'});
+      });
+    }
+    if(scrollRightButton){
+      scrollRightButton.addEventListener('click',function(){
+        tabsScroller.scrollBy({left:Math.max(180,tabsScroller.clientWidth*.65),behavior:'smooth'});
+      });
     }
     window.addEventListener('resize',updateScrollCue);
 
