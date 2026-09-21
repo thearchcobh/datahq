@@ -198,28 +198,73 @@
 
   @media(max-width:600px){
     #arch-menu-app{padding:6px 13px 22px}
-    #arch-menu-app .arch-scroll-right{
-      opacity:1;
-      visibility:visible;
-      pointer-events:auto;
+    #arch-menu-app .arch-tabs-wrap .arch-scroll-right{
+      opacity:1 !important;
+      visibility:visible !important;
+      pointer-events:auto !important;
+      display:block !important;
     }
     #arch-menu-app .arch-tabs-wrap.mobile-confirmed-end .arch-scroll-right{
-      opacity:0;
-      visibility:hidden;
-      pointer-events:none;
+      opacity:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
     }
     #arch-menu-app .arch-tabs-wrap{padding-top:6px}
     #arch-menu-app .arch-tab{padding:9px 13px;font-size:12.5px}
     #arch-menu-app .arch-tab:first-child{padding-left:0}
     #arch-menu-app .arch-tab.is-active::before{left:13px;right:13px}
     #arch-menu-app h2{font-size:29px}
-    #arch-menu-app .arch-item{grid-template-columns:minmax(0,1fr) minmax(64px,34%);gap:10px;padding:13px 0;width:100%;max-width:100%}
-    #arch-menu-app .arch-item-copy{min-width:0;max-width:100%}
-    #arch-menu-app .arch-item-copy h4{font-size:14px;overflow-wrap:anywhere}
-    #arch-menu-app .arch-item-copy p{font-size:12.5px;overflow-wrap:anywhere}
-    #arch-menu-app .arch-price{width:100%;max-width:none;min-width:0;gap:6px;font-size:13px;white-space:normal;flex-wrap:wrap;justify-content:flex-end}
-    #arch-menu-app .arch-price-piece{min-width:0;max-width:100%}
-    #arch-menu-app .arch-wine-price{justify-content:flex-end;flex-wrap:wrap}
+    #arch-menu-app .arch-item{
+      display:block;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      padding:13px 0;
+      overflow:hidden;
+    }
+    #arch-menu-app .arch-item-copy{
+      display:block;
+      width:100%;
+      min-width:0;
+      max-width:100%;
+    }
+    #arch-menu-app .arch-item-copy h4{
+      max-width:100%;
+      font-size:14px;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+    #arch-menu-app .arch-item-copy p{
+      max-width:100%;
+      font-size:12.5px;
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+    #arch-menu-app .arch-price{
+      display:flex;
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      margin-top:7px;
+      gap:12px;
+      font-size:13px;
+      white-space:normal;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:flex-start;
+      overflow:hidden;
+    }
+    #arch-menu-app .arch-price-piece{
+      min-width:0;
+      max-width:100%;
+      align-items:flex-end;
+    }
+    #arch-menu-app .arch-wine-price{
+      width:100%;
+      max-width:100%;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+    }
     #arch-menu-app .arch-wine-group>h3{font-size:19px}
   }
 </style>
@@ -352,7 +397,7 @@
     panels+=panel('digestif','Drinks','Digestif',(s.digestif||[]).map(simpleItem).join(''));
     panels+=panel('soft','Drinks','Best of the Rest',(s.soft||[]).map(simpleItem).join(''),'<p class="arch-note">Full range of teas & coffees available.</p>');
 
-    root.innerHTML=nav+'<div class="arch-panels">'+panels+'</div><div class="arch-build">Menu build v0.1.1</div>';
+    root.innerHTML=nav+'<div class="arch-panels">'+panels+'</div><div class="arch-build">Menu build v0.1.2</div>';
 
     var tabsWrap=root.querySelector('.arch-tabs-wrap');
     var tabsScroller=root.querySelector('.arch-tabs');
