@@ -2,10 +2,6 @@ name: Populate Square wine attributes
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/populate-wine-attributes.yml"
-      - "src/datahq/wine_attributes.py"
 
 concurrency:
   group: square-wine-attributes
