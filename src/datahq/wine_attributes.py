@@ -456,25 +456,31 @@ def main() -> int:
         item = copy.deepcopy(item)
         attrs = item.get("custom_attribute_values") or {}
 
-        attrs[tasting_def["custom_attribute_definition_data"]["key"]] = custom_attribute_value(
-            tasting_def, meta["tasting_notes"]
-        )
+        def replace_attribute_value(definition: dict[str, Any], value: Any | None) -> None:
+            definition_id = definition["id"]
+            # A seller-visible Square-defined attribute can already be stored under a
+            # qualified map key (for example "Square:..."). Remove any existing value
+            # that points at the same definition before adding the canonical value.
+            for existing_key, existing_value in list(attrs.items()):
+                if (existing_value or {}).get("custom_attribute_definition_id") == definition_id:
+                    attrs.pop(existing_key, None)
+
+            if value is not None:
+                key = definition["custom_attribute_definition_data"]["key"]
+                attrs[key] = custom_attribute_value(definition, value)
+
+        replace_attribute_value(tasting_def, meta["tasting_notes"])
 
         if meta["country"]:
-            attrs[country_def["custom_attribute_definition_data"]["key"]] = custom_attribute_value(
-                country_def, meta["country"]
-            )
+            replace_attribute_value(country_def, meta["country"])
 
         if meta["grape"]:
-            attrs[grape_def["custom_attribute_definition_data"]["key"]] = custom_attribute_value(
-                grape_def, meta["grape"]
-            )
+            replace_attribute_value(grape_def, meta["grape"])
 
-        cert_key = cert_def["custom_attribute_definition_data"]["key"]
         if meta["certifications"]:
-            attrs[cert_key] = custom_attribute_value(cert_def, meta["certifications"])
+            replace_attribute_value(cert_def, meta["certifications"])
         else:
-            attrs.pop(cert_key, None)
+            replace_attribute_value(cert_def, None)
 
         item["custom_attribute_values"] = attrs
         upsert_item(token, item)
