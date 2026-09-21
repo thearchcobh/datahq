@@ -6,6 +6,15 @@
   #arch-menu-app{--paper:#fbfaf7;--ink:#22211e;--muted:#766f66;--line:#ded9d0;--accent:#6e263a;max-width:980px;margin:0 auto;padding:8px 18px 28px;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
   #arch-menu-app *{box-sizing:border-box}
   #arch-menu-app .arch-menu-status{padding:30px 0;color:var(--muted)}
+  #arch-menu-app .arch-tab-control{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    overflow:hidden !important;
+    clip:rect(0 0 0 0) !important;
+    white-space:nowrap !important;
+    clip-path:inset(50%) !important;
+  }
 
   #arch-menu-app .arch-tabs-wrap{
     position:sticky;
@@ -27,13 +36,13 @@
     padding:0 38px;
     scroll-behavior:smooth;
     -webkit-overflow-scrolling:touch;
-    touch-action:pan-x;
     overscroll-behavior-x:contain;
   }
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
   #arch-menu-app .arch-tab{
     position:relative;
     flex:0 0 auto;
+    display:block;
     border:0;
     background:transparent;
     color:var(--muted);
@@ -55,8 +64,24 @@
     background:var(--line);
     transform:translateY(-50%);
   }
-  #arch-menu-app .arch-tab.is-active{color:var(--ink)}
-  #arch-menu-app .arch-tab.is-active::before{
+  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-tabs-wrap label[for="arch-tab-snacks"],
+  #arch-menu-app .arch-tab-control[value="plates"]:checked ~ .arch-tabs-wrap label[for="arch-tab-plates"],
+  #arch-menu-app .arch-tab-control[value="aperitif"]:checked ~ .arch-tabs-wrap label[for="arch-tab-aperitif"],
+  #arch-menu-app .arch-tab-control[value="wine-glass"]:checked ~ .arch-tabs-wrap label[for="arch-tab-wine-glass"],
+  #arch-menu-app .arch-tab-control[value="wine-bottle"]:checked ~ .arch-tabs-wrap label[for="arch-tab-wine-bottle"],
+  #arch-menu-app .arch-tab-control[value="beer"]:checked ~ .arch-tabs-wrap label[for="arch-tab-beer"],
+  #arch-menu-app .arch-tab-control[value="digestif"]:checked ~ .arch-tabs-wrap label[for="arch-tab-digestif"],
+  #arch-menu-app .arch-tab-control[value="soft"]:checked ~ .arch-tabs-wrap label[for="arch-tab-soft"]{
+    color:var(--ink);
+  }
+  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-tabs-wrap label[for="arch-tab-snacks"]::before,
+  #arch-menu-app .arch-tab-control[value="plates"]:checked ~ .arch-tabs-wrap label[for="arch-tab-plates"]::before,
+  #arch-menu-app .arch-tab-control[value="aperitif"]:checked ~ .arch-tabs-wrap label[for="arch-tab-aperitif"]::before,
+  #arch-menu-app .arch-tab-control[value="wine-glass"]:checked ~ .arch-tabs-wrap label[for="arch-tab-wine-glass"]::before,
+  #arch-menu-app .arch-tab-control[value="wine-bottle"]:checked ~ .arch-tabs-wrap label[for="arch-tab-wine-bottle"]::before,
+  #arch-menu-app .arch-tab-control[value="beer"]:checked ~ .arch-tabs-wrap label[for="arch-tab-beer"]::before,
+  #arch-menu-app .arch-tab-control[value="digestif"]:checked ~ .arch-tabs-wrap label[for="arch-tab-digestif"]::before,
+  #arch-menu-app .arch-tab-control[value="soft"]:checked ~ .arch-tabs-wrap label[for="arch-tab-soft"]::before{
     content:"";
     position:absolute;
     left:15px;
@@ -65,7 +90,7 @@
     height:1px;
     background:var(--ink);
   }
-  #arch-menu-app .arch-tab:first-child.is-active::before{left:2px}
+  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-tabs-wrap label[for="arch-tab-snacks"]::before{left:2px}
 
   #arch-menu-app .arch-scroll-arrow{
     position:absolute;
@@ -100,7 +125,16 @@
   }
 
   #arch-menu-app .arch-panel{display:none;padding-top:28px}
-  #arch-menu-app .arch-panel.is-active{display:block}
+  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-panels [data-panel="snacks"],
+  #arch-menu-app .arch-tab-control[value="plates"]:checked ~ .arch-panels [data-panel="plates"],
+  #arch-menu-app .arch-tab-control[value="aperitif"]:checked ~ .arch-panels [data-panel="aperitif"],
+  #arch-menu-app .arch-tab-control[value="wine-glass"]:checked ~ .arch-panels [data-panel="wine-glass"],
+  #arch-menu-app .arch-tab-control[value="wine-bottle"]:checked ~ .arch-panels [data-panel="wine-bottle"],
+  #arch-menu-app .arch-tab-control[value="beer"]:checked ~ .arch-panels [data-panel="beer"],
+  #arch-menu-app .arch-tab-control[value="digestif"]:checked ~ .arch-panels [data-panel="digestif"],
+  #arch-menu-app .arch-tab-control[value="soft"]:checked ~ .arch-panels [data-panel="soft"]{
+    display:block;
+  }
   #arch-menu-app .arch-section-head{margin:0 0 18px}
   #arch-menu-app .arch-eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:700;color:var(--muted);margin:0 0 5px}
   #arch-menu-app h2{font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1.05;font-weight:500;margin:0}
@@ -274,10 +308,15 @@
       ['soft','Best of the Rest']
     ];
 
-    var nav='<div class="arch-tabs-wrap is-at-start">'+
+    var controls=tabs.map(function(t,i){
+      return '<input class="arch-tab-control" type="radio" name="arch-menu-section" id="arch-tab-'+t[0]+'" value="'+t[0]+'"'+(i===0?' checked':'')+'>';
+    }).join('');
+
+    var nav=controls+
+      '<div class="arch-tabs-wrap is-at-start">'+
       '<button type="button" class="arch-scroll-arrow arch-scroll-left" aria-label="Scroll menu sections left">‹</button>'+
-      '<div class="arch-tabs">'+tabs.map(function(t,i){
-        return '<button type="button" class="arch-tab'+(i===0?' is-active':'')+'" data-tab="'+t[0]+'">'+esc(t[1])+'</button>';
+      '<div class="arch-tabs">'+tabs.map(function(t){
+        return '<label class="arch-tab" for="arch-tab-'+t[0]+'" data-tab="'+t[0]+'">'+esc(t[1])+'</label>';
       }).join('')+'</div>'+
       '<button type="button" class="arch-scroll-arrow arch-scroll-right" aria-label="Scroll menu sections right">›</button>'+
       '</div>';
@@ -294,14 +333,14 @@
     panels+=panel('digestif','Drinks','Digestif',(s.digestif||[]).map(simpleItem).join(''));
     panels+=panel('soft','Drinks','Best of the Rest',(s.soft||[]).map(simpleItem).join(''),'<p class="arch-note">Full range of teas & coffees available.</p>');
 
-    root.innerHTML=nav+panels;
+    root.innerHTML=nav+'<div class="arch-panels">'+panels+'</div>';
 
     var tabsWrap=root.querySelector('.arch-tabs-wrap');
     var tabsScroller=root.querySelector('.arch-tabs');
     var scrollLeftButton=root.querySelector('.arch-scroll-left');
     var scrollRightButton=root.querySelector('.arch-scroll-right');
-    var buttons=[].slice.call(root.querySelectorAll('.arch-tab'));
-    var panelEls=[].slice.call(root.querySelectorAll('.arch-panel'));
+    var tabLabels=[].slice.call(root.querySelectorAll('.arch-tab'));
+    var tabControls=[].slice.call(root.querySelectorAll('.arch-tab-control'));
 
     function updateScrollCue(){
       if(!tabsWrap||!tabsScroller) return;
@@ -311,34 +350,22 @@
       tabsWrap.classList.toggle('is-at-end',!hasOverflow||tabsScroller.scrollLeft>=maxScroll-4);
     }
 
-    function select(key){
-      buttons.forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-tab')===key);});
-      panelEls.forEach(function(p){p.classList.toggle('is-active',p.getAttribute('data-panel')===key);});
-
-      var active=buttons.find(function(b){return b.getAttribute('data-tab')===key;});
-      if(active&&active.scrollIntoView){
-        active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+    function revealSelectedTab(){
+      var checked=root.querySelector('.arch-tab-control:checked');
+      if(!checked) return;
+      var label=root.querySelector('label[for="'+checked.id+'"]');
+      if(label&&label.scrollIntoView){
+        label.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
       }
       window.setTimeout(updateScrollCue,220);
     }
 
-    buttons.forEach(function(b){
-      b.addEventListener('click',function(){select(b.getAttribute('data-tab'));});
+    tabControls.forEach(function(control){
+      control.addEventListener('change',revealSelectedTab);
     });
 
     if(tabsScroller){
       tabsScroller.addEventListener('scroll',updateScrollCue,{passive:true});
-
-      // Mouse/trackpad wheel: turn vertical wheel movement into horizontal menu scrolling.
-      tabsScroller.addEventListener('wheel',function(e){
-        var maxScroll=Math.max(0,tabsScroller.scrollWidth-tabsScroller.clientWidth);
-        if(maxScroll<=4) return;
-        var delta=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
-        if(!delta) return;
-        e.preventDefault();
-        tabsScroller.scrollLeft+=delta;
-        updateScrollCue();
-      },{passive:false});
 
     }
     if(scrollLeftButton){
@@ -353,7 +380,7 @@
     }
     window.addEventListener('resize',updateScrollCue);
 
-    select('snacks');
+    revealSelectedTab();
     window.setTimeout(updateScrollCue,0);
     window.setTimeout(updateScrollCue,250);
   }
