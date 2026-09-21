@@ -1,0 +1,27 @@
+name: Test embedded menu endpoint
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/test-arch-menu.yml"
+
+jobs:
+  test:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Test embedded menu endpoint'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch public menu
+        run: |
+          set -euo pipefail
+          url="https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu"
+          curl --fail --silent --show-error --location "$url" -o /tmp/menu.html
+          grep -q '<title>The Arch Menu</title>' /tmp/menu.html
+          grep -q 'Aperitif' /tmp/menu.html
+          grep -q 'Wine by the Glass' /tmp/menu.html
+          grep -q 'Snacks & Small Bites' /tmp/menu.html
+          echo "VERIFIED: public menu endpoint returned expected HTML"
+          wc -c /tmp/menu.html
