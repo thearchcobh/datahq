@@ -1,29 +1,175 @@
-<div id="arch-menu-embed" style="width:100%;max-width:1040px;margin:0 auto;">
-  <iframe
-    id="arch-menu-frame"
-    src="https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu"
-    title="The Arch menu"
-    loading="lazy"
-    scrolling="no"
-    style="display:block;width:100%;min-height:900px;border:0;background:transparent;"
-  ></iframe>
+<div id="arch-menu-app">
+  <div class="arch-menu-status">Loading menu…</div>
 </div>
 
+<style>
+  #arch-menu-app{--paper:#fbfaf7;--ink:#22211e;--muted:#766f66;--line:#ded9d0;--accent:#6e263a;max-width:980px;margin:0 auto;padding:8px 18px 28px;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+  #arch-menu-app *{box-sizing:border-box}
+  #arch-menu-app .arch-menu-status{padding:30px 0;color:var(--muted)}
+  #arch-menu-app .arch-tabs-wrap{position:sticky;top:0;z-index:5;background:rgba(251,250,247,.97);backdrop-filter:blur(8px);padding:10px 0 12px;border-bottom:1px solid var(--line)}
+  #arch-menu-app .arch-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 1px}
+  #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
+  #arch-menu-app .arch-tab{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer}
+  #arch-menu-app .arch-tab.is-active{background:var(--ink);border-color:var(--ink);color:#fff}
+  #arch-menu-app .arch-panel{display:none;padding-top:28px}
+  #arch-menu-app .arch-panel.is-active{display:block}
+  #arch-menu-app .arch-section-head{margin:0 0 18px}
+  #arch-menu-app .arch-eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:11px;font-weight:700;color:var(--muted);margin:0 0 5px}
+  #arch-menu-app h2{font-family:Georgia,'Times New Roman',serif;font-size:34px;line-height:1.05;font-weight:500;margin:0}
+  #arch-menu-app .arch-wine-group{margin:27px 0 0}
+  #arch-menu-app .arch-wine-group:first-child{margin-top:0}
+  #arch-menu-app .arch-wine-group>h3{font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:500;margin:0;padding:0 0 8px;border-bottom:1px solid var(--ink)}
+  #arch-menu-app .arch-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;padding:14px 0;border-bottom:1px solid var(--line)}
+  #arch-menu-app .arch-item-copy h4{font-size:15px;line-height:1.35;margin:0;font-weight:650}
+  #arch-menu-app .arch-item-copy p{font-size:13px;line-height:1.45;color:var(--muted);margin:5px 0 0}
+  #arch-menu-app .arch-item-copy .arch-tasting{font-family:Georgia,'Times New Roman',serif;font-style:italic}
+  #arch-menu-app .arch-price{display:flex;gap:10px;align-items:flex-start;white-space:nowrap;text-align:right;font-size:14px}
+  #arch-menu-app .arch-price-piece{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  #arch-menu-app .arch-var-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  #arch-menu-app .arch-wine-price{align-items:center;gap:6px}
+  #arch-menu-app .arch-slash{color:var(--muted)}
+  #arch-menu-app .arch-badge{display:inline-block;vertical-align:1px;border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:4px;font-size:9px;letter-spacing:.04em;color:var(--muted)}
+  #arch-menu-app .arch-note{font-size:12px;line-height:1.45;color:var(--muted);margin:18px 0 0}
+  @media(max-width:600px){
+    #arch-menu-app{padding:6px 13px 22px}
+    #arch-menu-app .arch-tabs-wrap{padding-top:7px}
+    #arch-menu-app h2{font-size:29px}
+    #arch-menu-app .arch-item{gap:12px;padding:13px 0}
+    #arch-menu-app .arch-item-copy h4{font-size:14px}
+    #arch-menu-app .arch-item-copy p{font-size:12.5px}
+    #arch-menu-app .arch-price{font-size:13px}
+    #arch-menu-app .arch-wine-group>h3{font-size:19px}
+  }
+</style>
+
 <script>
-(function () {
-  var frame = document.getElementById('arch-menu-frame');
-  if (!frame) return;
+(function(){
+  var root=document.getElementById('arch-menu-app');
+  if(!root) return;
 
-  var allowedOrigin = 'https://tqrgwcixxifzdzsphdxj.supabase.co';
+  var endpoint='https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu';
+  var wineStyles=['Sparkling','Rosé','Orange / Skin Contact','White','Red'];
 
-  window.addEventListener('message', function (event) {
-    if (event.origin !== allowedOrigin) return;
-    if (!event.data || event.data.type !== 'arch-menu-height') return;
+  function esc(value){
+    return String(value==null?'':value)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
 
-    var height = Number(event.data.height);
-    if (!Number.isFinite(height)) return;
+  function money(amount){
+    if(amount==null) return '';
+    return new Intl.NumberFormat('en-IE',{
+      style:'currency',
+      currency:'EUR',
+      minimumFractionDigits:amount%100===0?0:2,
+      maximumFractionDigits:2
+    }).format(amount/100);
+  }
 
-    frame.style.height = Math.max(500, Math.min(height, 5000)) + 'px';
-  });
+  function simpleItem(item){
+    var vars=item.variations||[];
+    var prices=vars.map(function(v){
+      var label=vars.length>1?'<span class="arch-var-label">'+esc(v.name||'Regular')+'</span>':'';
+      return '<span class="arch-price-piece">'+label+'<strong>'+esc(money(v.price_amount))+'</strong></span>';
+    }).join('');
+    var desc=(item.description||'').trim();
+    var same=desc.toLowerCase()===(item.display_name||'').toLowerCase();
+    return '<article class="arch-item">'+
+      '<div class="arch-item-copy"><h4>'+esc(item.display_name||item.name)+'</h4>'+
+      (desc&&!same?'<p>'+esc(desc)+'</p>':'')+'</div>'+
+      '<div class="arch-price">'+prices+'</div>'+
+      '</article>';
+  }
+
+  function wineItem(item,mode){
+    var vars=item.variations||[];
+    var glass=vars.find(function(v){return /glass/i.test(v.name||'');});
+    var bottle=vars.find(function(v){return /bottle/i.test(v.name||'')&&!/glass/i.test(v.name||'');});
+    if(!bottle&&vars.length===1&&!/glass/i.test(vars[0].name||'')) bottle=vars[0];
+
+    var priceHtml='';
+    if(mode==='glass'&&glass){
+      priceHtml='<strong>'+esc(money(glass.price_amount))+'</strong>';
+      if(bottle) priceHtml+='<span class="arch-slash">/</span><strong>'+esc(money(bottle.price_amount))+'</strong>';
+    }else if(mode==='bottle'&&bottle){
+      priceHtml='<strong>'+esc(money(bottle.price_amount))+'</strong>';
+    }
+
+    var meta=[item.grape,item.country?'('+item.country+')':''].filter(Boolean).join(' ');
+    var badges=(item.certifications||[]).map(function(c){return '<span class="arch-badge">'+esc(c)+'</span>';}).join('');
+
+    return '<article class="arch-item">'+
+      '<div class="arch-item-copy"><h4>'+esc(item.display_name||item.name)+' '+badges+'</h4>'+
+      (meta?'<p>'+esc(meta)+'</p>':'')+
+      (item.tasting_notes?'<p class="arch-tasting">'+esc(item.tasting_notes)+'</p>':'')+
+      '</div><div class="arch-price arch-wine-price">'+priceHtml+'</div></article>';
+  }
+
+  function winePanel(items,mode){
+    var html='';
+    wineStyles.forEach(function(style){
+      var matches=(items||[]).filter(function(i){return i.style===style;});
+      if(!matches.length) return;
+      html+='<section class="arch-wine-group"><h3>'+esc(style)+'</h3>'+
+        matches.map(function(i){return wineItem(i,mode);}).join('')+
+        '</section>';
+    });
+    return html||'<p class="arch-note">Nothing currently listed in this section.</p>';
+  }
+
+  function panel(key,eyebrow,title,body,extra){
+    return '<section class="arch-panel" data-panel="'+key+'">'+
+      '<header class="arch-section-head"><p class="arch-eyebrow">'+esc(eyebrow)+'</p><h2>'+esc(title)+'</h2></header>'+
+      body+(extra||'')+'</section>';
+  }
+
+  function render(data){
+    var s=data.sections||{};
+    var tabs=[
+      ['aperitif','Aperitif'],
+      ['wine-glass','Wine by the Glass'],
+      ['wine-bottle','Wine by the Bottle'],
+      ['beer','Beer & Cider'],
+      ['digestif','Digestif'],
+      ['soft','Best of the Rest'],
+      ['snacks','Snacks & Small Bites'],
+      ['plates','Sharing Plates']
+    ];
+
+    var nav='<div class="arch-tabs-wrap"><div class="arch-tabs">'+tabs.map(function(t,i){
+      return '<button type="button" class="arch-tab'+(i===0?' is-active':'')+'" data-tab="'+t[0]+'">'+esc(t[1])+'</button>';
+    }).join('')+'</div></div>';
+
+    var legend='<p class="arch-note">O = Organic · HVE = High Environmental Value · Bio = Biodynamic · V = Vegan</p>';
+
+    var panels='';
+    panels+=panel('aperitif','Drinks','Aperitif',(s.aperitif||[]).map(simpleItem).join(''));
+    panels+=panel('wine-glass','Wine','By the Glass',winePanel(s.wine_glass,'glass'),legend);
+    panels+=panel('wine-bottle','Wine','By the Bottle',winePanel(s.wine_bottle,'bottle'),legend);
+    panels+=panel('beer','Drinks','Beer & Cider',(s.beer||[]).map(simpleItem).join(''));
+    panels+=panel('digestif','Drinks','Digestif',(s.digestif||[]).map(simpleItem).join(''));
+    panels+=panel('soft','Drinks','Best of the Rest',(s.soft||[]).map(simpleItem).join(''),'<p class="arch-note">Full range of teas & coffees available.</p>');
+    panels+=panel('snacks','Food · from 2pm','Snacks & Small Bites',(s.snacks||[]).map(simpleItem).join(''));
+    panels+=panel('plates','Food · from 2pm','Sharing Plates',(s.plates||[]).map(simpleItem).join(''));
+
+    root.innerHTML=nav+panels;
+
+    var buttons=[].slice.call(root.querySelectorAll('.arch-tab'));
+    var panelEls=[].slice.call(root.querySelectorAll('.arch-panel'));
+
+    function select(key){
+      buttons.forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-tab')===key);});
+      panelEls.forEach(function(p){p.classList.toggle('is-active',p.getAttribute('data-panel')===key);});
+    }
+    buttons.forEach(function(b){b.addEventListener('click',function(){select(b.getAttribute('data-tab'));});});
+    select('aperitif');
+  }
+
+  fetch(endpoint,{method:'GET',mode:'cors'})
+    .then(function(r){if(!r.ok) throw new Error('Menu request failed'); return r.json();})
+    .then(render)
+    .catch(function(){
+      root.innerHTML='<p class="arch-menu-status">Menu temporarily unavailable. Please try again shortly.</p>';
+    });
 })();
 </script>
