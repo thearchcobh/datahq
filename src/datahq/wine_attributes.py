@@ -20,6 +20,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "White flowers, Pear, Baked Bread",
         "certifications": [],
         "style": "Sparkling",
+        "buyer_facing_name": "Aromes De Celler Cava Brut",
     },
     {
         "menu_name": "Tuffeau Brut Rosé",
@@ -29,24 +30,27 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Raspberry, Pink Grapefruit",
         "certifications": ["HVE"],
         "style": "Sparkling",
+        "buyer_facing_name": "Tuffeau Brut Rosé",
     },
     {
         "menu_name": "Peche Coquin 2025",
         "aliases": ["Peche Coquin"],
         "country": "France",
-        "grape": None,
+        "grape": "Cinsault, Syrah, Grenache",
         "tasting_notes": "Strawberry, Raspberry, Floral",
         "certifications": ["HVE"],
         "style": "Rosé",
+        "buyer_facing_name": "Peche Coquin 2025",
     },
     {
         "menu_name": "Ovella Negra",
         "aliases": ["Ovella Negra"],
         "country": "Spain",
-        "grape": None,
+        "grape": "Garnacha Blanca, Malvasía de Sitges",
         "tasting_notes": "Peach juice, Orange Zest",
         "certifications": [],
         "style": "Orange / Skin Contact",
+        "buyer_facing_name": "Ovella Negra",
     },
     {
         "menu_name": "Domaine de la Rochette, Sauvignon Blanc",
@@ -56,6 +60,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Elderflower, Blackcurrant Leaf",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Domaine de la Rochette",
     },
     {
         "menu_name": "Laxas Albarino",
@@ -65,21 +70,23 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Green Apple, Pear, Lemon Zest",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Laxas Albarino",
     },
     {
         "menu_name": "Maretti Langhe Rosso 2022",
         "aliases": ["Maretti Rosso 2022"],
         "country": "Italy",
-        "grape": None,
+        "grape": "Nebbiolo, Barbera",
         "tasting_notes": "Cherry, plum, dried herbs, anise, earthy, fresh acidity",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Maretti Langhe Rosso 2022",
     },
     {
         "menu_name": "Chateau Lyonnat Lussac Saint-Emilion",
         "aliases": ["Saint-Emilion 2016"],
         "country": "France",
-        "grape": None,
+        "grape": "Merlot, Cabernet Sauvignon",
         "tasting_notes": "Mature berry fruit, cassis, cedar, smooth fine tannins",
         "certifications": [],
         "style": "Red",
@@ -93,6 +100,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Citrus, Floral",
         "certifications": [],
         "style": "Sparkling",
+        "buyer_facing_name": "Masottina Prosecco Spumante DOCG",
     },
     {
         "menu_name": "Josef Ehmoser",
@@ -102,15 +110,17 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Tart Cherry, Raspberry, Crisp",
         "certifications": [],
         "style": "Rosé",
+        "buyer_facing_name": "Josef Ehmoser",
     },
     {
         "menu_name": "Bedoba Orange",
         "aliases": ["Bedoba Orange"],
         "country": "Georgia",
-        "grape": None,
+        "grape": "Rkatsiteli",
         "tasting_notes": "Dried Apricots, Honey, Orange Peel",
         "certifications": [],
         "style": "Orange / Skin Contact",
+        "buyer_facing_name": "Bedoba Orange",
     },
     {
         "menu_name": "Milan Nestarec OKR",
@@ -120,6 +130,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Rosewater, mandarin peel, white pepper and passionfruit",
         "certifications": [],
         "style": "Orange / Skin Contact",
+        "buyer_facing_name": "Milan Nestarec OKR",
     },
     {
         "menu_name": "Boyante, Verdejo",
@@ -129,6 +140,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Citrus, Apple, Lychee, Mineral",
         "certifications": ["V"],
         "style": "White",
+        "buyer_facing_name": "Boyante",
     },
     {
         "menu_name": "Insolia Assuli Carinda DOC",
@@ -138,6 +150,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Orange Blossom, Lemon, Marzipan",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Insolia Assuli Carinda DOC",
     },
     {
         "menu_name": "Galets Dores",
@@ -147,6 +160,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Honeysuckle, Clementine, well rounded",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Galets Dores",
     },
     {
         "menu_name": "Jean Loron IGP Chardonnay",
@@ -156,6 +170,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Galia Melon, White Flowers, Citrus",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Jean Loron IGP Chardonnay",
     },
     {
         "menu_name": "Baron de Badassiere Viognier IGP",
@@ -165,6 +180,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Almond, Honey, Guava, Apricot",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Baron de Badassiere Viognier IGP",
     },
     {
         "menu_name": "Coteaux du Giennois ‘Lombeline’ Sauvignon Blanc",
@@ -174,6 +190,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Gooseberry, Lemon, Lime",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Coteaux du Giennois ‘Lombeline’ Sauvignon Blanc",
     },
     {
         "menu_name": "Domaine Zinck Pinot Blanc ‘Cuvee Portrait’",
@@ -183,6 +200,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Yellow Pear, Apple, White Flowers",
         "certifications": ["Bio"],
         "style": "White",
+        "buyer_facing_name": "Domaine Zinck Pinot Blanc ‘Cuvee Portrait’",
     },
     {
         "menu_name": "Muscadet Sèvre et Maine sur lie",
@@ -192,6 +210,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "White blossoms, Pear, Almond",
         "certifications": ["O", "V"],
         "style": "White",
+        "buyer_facing_name": "Muscadet Sèvre et Maine sur lie",
     },
     {
         "menu_name": "Azevedo Vinho Verde Loureiro/Alvarinho",
@@ -201,6 +220,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Nectarine, Lime Blossom, Fresh Mango",
         "certifications": [],
         "style": "White",
+        "buyer_facing_name": "Azevedo Vinho Verde",
     },
     {
         "menu_name": "Domaine Grosbois ‘Marnay’ 2023",
@@ -210,6 +230,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Orchard Fruit, White Flowers, Graphite",
         "certifications": ["Bio"],
         "style": "White",
+        "buyer_facing_name": "Domaine Grosbois ‘Marnay’ 2023",
     },
     {
         "menu_name": "El Olmo, Rioja Crianza",
@@ -219,6 +240,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Red Cherry, Spice, Tobacco",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "El Olmo, Rioja Crianza",
     },
     {
         "menu_name": "Terre Forti Nero D’Avola",
@@ -228,6 +250,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Blackberries, Redcurrant, Cedar",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Terre Forti Nero D’Avola",
     },
     {
         "menu_name": "Willunga 100, McLaren Vale, Grenache",
@@ -237,6 +260,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Strawberry, Black Pepper",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Willunga 100, McLaren Vale",
     },
     {
         "menu_name": "Primitivo Plantamua Giola del Colle",
@@ -246,6 +270,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Plum, Blueberry, Red Cabbage, Spice",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Primitivo Plantamua Giola del Colle",
     },
     {
         "menu_name": "Jean Gamay Noir",
@@ -255,6 +280,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Ripe blackberry, blueberry, spicy, juicy",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Jean Gamay Noir",
     },
     {
         "menu_name": "La Griotte Malbec Cahors",
@@ -264,15 +290,17 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Sour Cherry, Blood Orange, Rose",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "La Griotte Malbec Cahors",
     },
     {
         "menu_name": "Chateau Tayet",
         "aliases": ["Château Tayet Cuvée Prestige Bordeaux Supérior 2019"],
         "country": "France",
-        "grape": None,
+        "grape": "Merlot, Cabernet Sauvignon, Petit Verdot",
         "tasting_notes": "Black Plum, Vanilla, Spice",
         "certifications": [],
         "style": "Red",
+        "buyer_facing_name": "Chateau Tayet",
     },
     {
         "menu_name": "Cantina Atzei, ‘Saragat’, Monica",
@@ -282,6 +310,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Cherry, Plum, Spice",
         "certifications": ["Bio", "V"],
         "style": "Red",
+        "buyer_facing_name": "Cantina Atzei, ‘Saragat’",
     },
     {
         "menu_name": "Dandelion Vineyards, ‘Lionheart of the Barossa’, Shiraz",
@@ -291,6 +320,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Rosemary, Dark Chocolate, Plums, White Pepper",
         "certifications": ["Bio", "V"],
         "style": "Red",
+        "buyer_facing_name": "Dandelion Vineyards, ‘Lionheart of the Barossa’",
     },
     {
         "menu_name": "Clos du Gravillas, Muscat",
@@ -300,6 +330,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "tasting_notes": "Orange blossom, Honey, Almond",
         "certifications": [],
         "style": "Sweet / Fortified",
+        "buyer_facing_name": "Clos du Gravillas",
     },
 ]
 
