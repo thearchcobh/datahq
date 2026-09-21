@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import html
 import os
 import sys
 import uuid
@@ -18,6 +19,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Macabeo, Parellada, Xarello",
         "tasting_notes": "White flowers, Pear, Baked Bread",
         "certifications": [],
+        "style": "Sparkling",
     },
     {
         "menu_name": "Tuffeau Brut Rosé",
@@ -26,6 +28,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Gamay",
         "tasting_notes": "Raspberry, Pink Grapefruit",
         "certifications": ["HVE"],
+        "style": "Sparkling",
     },
     {
         "menu_name": "Peche Coquin 2025",
@@ -34,6 +37,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Strawberry, Raspberry, Floral",
         "certifications": ["HVE"],
+        "style": "Rosé",
     },
     {
         "menu_name": "Ovella Negra",
@@ -42,6 +46,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Peach juice, Orange Zest",
         "certifications": [],
+        "style": "Orange / Skin Contact",
     },
     {
         "menu_name": "Domaine de la Rochette, Sauvignon Blanc",
@@ -50,6 +55,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Sauvignon Blanc",
         "tasting_notes": "Elderflower, Blackcurrant Leaf",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Laxas Albarino",
@@ -58,6 +64,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Albarino",
         "tasting_notes": "Green Apple, Pear, Lemon Zest",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Maretti Langhe Rosso 2022",
@@ -66,6 +73,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Cherry, plum, dried herbs, anise, earthy, fresh acidity",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Chateau Lyonnat Lussac Saint-Emilion",
@@ -74,6 +82,8 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Mature berry fruit, cassis, cedar, smooth fine tannins",
         "certifications": [],
+        "style": "Red",
+        "buyer_facing_name": "Chateau Lyonnat Lussac Saint-Emilion",
     },
     {
         "menu_name": "Masottina Prosecco Spumante DOCG",
@@ -82,6 +92,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Glera",
         "tasting_notes": "Citrus, Floral",
         "certifications": [],
+        "style": "Sparkling",
     },
     {
         "menu_name": "Josef Ehmoser",
@@ -90,6 +101,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Zweigelt",
         "tasting_notes": "Tart Cherry, Raspberry, Crisp",
         "certifications": [],
+        "style": "Rosé",
     },
     {
         "menu_name": "Bedoba Orange",
@@ -98,6 +110,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Dried Apricots, Honey, Orange Peel",
         "certifications": [],
+        "style": "Orange / Skin Contact",
     },
     {
         "menu_name": "Milan Nestarec OKR",
@@ -106,6 +119,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Gruner Velt. Blend",
         "tasting_notes": "Rosewater, mandarin peel, white pepper and passionfruit",
         "certifications": [],
+        "style": "Orange / Skin Contact",
     },
     {
         "menu_name": "Boyante, Verdejo",
@@ -114,6 +128,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Verdejo",
         "tasting_notes": "Citrus, Apple, Lychee, Mineral",
         "certifications": ["V"],
+        "style": "White",
     },
     {
         "menu_name": "Insolia Assuli Carinda DOC",
@@ -122,6 +137,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Insolia",
         "tasting_notes": "Orange Blossom, Lemon, Marzipan",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Galets Dores",
@@ -130,6 +146,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Roussanne, Grenache, Vermentino",
         "tasting_notes": "Honeysuckle, Clementine, well rounded",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Jean Loron IGP Chardonnay",
@@ -138,6 +155,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Chardonnay",
         "tasting_notes": "Galia Melon, White Flowers, Citrus",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Baron de Badassiere Viognier IGP",
@@ -146,6 +164,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Viognier",
         "tasting_notes": "Almond, Honey, Guava, Apricot",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Coteaux du Giennois ‘Lombeline’ Sauvignon Blanc",
@@ -154,14 +173,16 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Sauvignon Blanc",
         "tasting_notes": "Gooseberry, Lemon, Lime",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Domaine Zinck Pinot Blanc ‘Cuvee Portrait’",
         "aliases": ["Domaine Zinck Pinot Blanc"],
-        "country": None,
+        "country": "France",
         "grape": "Pinot Blanc",
         "tasting_notes": "Yellow Pear, Apple, White Flowers",
         "certifications": ["Bio"],
+        "style": "White",
     },
     {
         "menu_name": "Muscadet Sèvre et Maine sur lie",
@@ -170,6 +191,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Muscadet",
         "tasting_notes": "White blossoms, Pear, Almond",
         "certifications": ["O", "V"],
+        "style": "White",
     },
     {
         "menu_name": "Azevedo Vinho Verde Loureiro/Alvarinho",
@@ -178,6 +200,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Loureiro/Alvarinho",
         "tasting_notes": "Nectarine, Lime Blossom, Fresh Mango",
         "certifications": [],
+        "style": "White",
     },
     {
         "menu_name": "Domaine Grosbois ‘Marnay’ 2023",
@@ -186,6 +209,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Chenin Blanc",
         "tasting_notes": "Orchard Fruit, White Flowers, Graphite",
         "certifications": ["Bio"],
+        "style": "White",
     },
     {
         "menu_name": "El Olmo, Rioja Crianza",
@@ -194,6 +218,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Tempranillo",
         "tasting_notes": "Red Cherry, Spice, Tobacco",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Terre Forti Nero D’Avola",
@@ -202,14 +227,16 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Nero D'Avola",
         "tasting_notes": "Blackberries, Redcurrant, Cedar",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Willunga 100, McLaren Vale, Grenache",
         "aliases": ["Willunga 100"],
-        "country": "South Africa",
+        "country": "Australia",
         "grape": "Grenache",
         "tasting_notes": "Strawberry, Black Pepper",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Primitivo Plantamua Giola del Colle",
@@ -218,6 +245,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Primitivo",
         "tasting_notes": "Plum, Blueberry, Red Cabbage, Spice",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Jean Gamay Noir",
@@ -226,6 +254,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Gamay Noir",
         "tasting_notes": "Ripe blackberry, blueberry, spicy, juicy",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "La Griotte Malbec Cahors",
@@ -234,6 +263,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Malbec",
         "tasting_notes": "Sour Cherry, Blood Orange, Rose",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Chateau Tayet",
@@ -242,6 +272,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": None,
         "tasting_notes": "Black Plum, Vanilla, Spice",
         "certifications": [],
+        "style": "Red",
     },
     {
         "menu_name": "Cantina Atzei, ‘Saragat’, Monica",
@@ -250,14 +281,16 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Monica",
         "tasting_notes": "Cherry, Plum, Spice",
         "certifications": ["Bio", "V"],
+        "style": "Red",
     },
     {
         "menu_name": "Dandelion Vineyards, ‘Lionheart of the Barossa’, Shiraz",
         "aliases": ["Dandelion Vineyards, ‘Lionheart of the Barossa’, Shiraz"],
-        "country": "South Australia",
+        "country": "Australia",
         "grape": "Shiraz",
         "tasting_notes": "Rosemary, Dark Chocolate, Plums, White Pepper",
         "certifications": ["Bio", "V"],
+        "style": "Red",
     },
     {
         "menu_name": "Clos du Gravillas, Muscat",
@@ -266,6 +299,7 @@ WINE_METADATA: list[dict[str, Any]] = [
         "grape": "Muscat",
         "tasting_notes": "Orange blossom, Honey, Almond",
         "certifications": [],
+        "style": "Sweet / Fortified",
     },
 ]
 
@@ -328,6 +362,38 @@ def create_certification_definition(token: str) -> dict[str, Any]:
     return response["catalog_object"]
 
 
+
+def create_wine_style_definition(token: str) -> dict[str, Any]:
+    body = {
+        "idempotency_key": str(uuid.uuid4()),
+        "object": {
+            "type": "CUSTOM_ATTRIBUTE_DEFINITION",
+            "id": "#wine_style",
+            "custom_attribute_definition_data": {
+                "type": "SELECTION",
+                "name": "Wine Style",
+                "key": "wine_style",
+                "allowed_object_types": ["ITEM"],
+                "seller_visibility": "SELLER_VISIBILITY_READ_WRITE_VALUES",
+                "app_visibility": "APP_VISIBILITY_READ_WRITE_VALUES",
+                "selection_config": {
+                    "max_allowed_selections": 1,
+                    "allowed_selections": [
+                        {"uid": "#sparkling", "name": "Sparkling"},
+                        {"uid": "#rose", "name": "Rosé"},
+                        {"uid": "#orange", "name": "Orange / Skin Contact"},
+                        {"uid": "#white", "name": "White"},
+                        {"uid": "#red", "name": "Red"},
+                        {"uid": "#sweet_fortified", "name": "Sweet / Fortified"},
+                    ],
+                },
+            },
+        },
+    }
+    response = request_json("POST", "/v2/catalog/object", token, body=body)
+    return response["catalog_object"]
+
+
 def custom_attribute_value(definition: dict[str, Any], value: Any) -> dict[str, Any]:
     data = definition["custom_attribute_definition_data"]
     result: dict[str, Any] = {
@@ -379,6 +445,7 @@ def main() -> int:
     country_def = definition_by_name(definitions, "Country")
     grape_def = definition_by_name(definitions, "Grape Variety")
     cert_def = definition_by_name(definitions, "Certifications / Dietary")
+    style_def = definition_by_name(definitions, "Wine Style")
 
     required = {
         "Tasting Notes": tasting_def,
@@ -402,6 +469,17 @@ def main() -> int:
             cert_def = definition_by_name(definitions, "Certifications / Dietary")
             if cert_def is None:
                 raise RuntimeError("Created Certifications / Dietary but could not retrieve it afterwards")
+
+    if style_def is None:
+        if not args.apply:
+            print("PLAN: create SELECTION custom attribute 'Wine Style'")
+        else:
+            print("Creating custom attribute definition: Wine Style")
+            create_wine_style_definition(token)
+            definitions = list_catalog_objects(token, "CUSTOM_ATTRIBUTE_DEFINITION")
+            style_def = definition_by_name(definitions, "Wine Style")
+            if style_def is None:
+                raise RuntimeError("Created Wine Style but could not retrieve it afterwards")
 
     items = [obj for obj in list_catalog_objects(token, "ITEM") if active_item(obj)]
     items_by_name: dict[str, list[dict[str, Any]]] = {}
@@ -438,7 +516,9 @@ def main() -> int:
                 f"PLAN: {match['id']} | {(match.get('item_data') or {}).get('name')} | "
                 f"Country={meta['country'] or '-'} | Grape={meta['grape'] or '-'} | "
                 f"Tasting Notes={meta['tasting_notes']} | "
-                f"Certifications={','.join(meta['certifications']) or '-'}"
+                f"Certifications={','.join(meta['certifications']) or '-'} | "
+                f"Style={meta['style']} | "
+                f"Buyer Name={meta.get('buyer_facing_name') or '-'}"
             )
 
     if not args.apply:
@@ -449,6 +529,8 @@ def main() -> int:
 
     if cert_def is None:
         raise RuntimeError("Certifications / Dietary definition is unavailable")
+    if style_def is None:
+        raise RuntimeError("Wine Style definition is unavailable")
 
     updated = 0
     for match, meta in planned:
@@ -482,6 +564,17 @@ def main() -> int:
         else:
             replace_attribute_value(cert_def, None)
 
+        replace_attribute_value(style_def, [meta["style"]])
+
+        item_data = item.get("item_data") or {}
+        item_data["description"] = meta["tasting_notes"]
+        item_data["description_html"] = f"<p>{html.escape(meta['tasting_notes'])}</p>"
+        item_data.pop("description_plaintext", None)
+
+        if meta.get("buyer_facing_name"):
+            item_data["buyer_facing_name"] = meta["buyer_facing_name"]
+
+        item["item_data"] = item_data
         item["custom_attribute_values"] = attrs
         upsert_item(token, item)
         updated += 1
