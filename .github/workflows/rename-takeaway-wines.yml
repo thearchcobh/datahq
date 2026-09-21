@@ -1,0 +1,44 @@
+name: Rename verified Square takeaway wines
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/datahq/rename_takeaway_wines.py"
+      - ".github/workflows/rename-takeaway-wines.yml"
+
+concurrency:
+  group: square-rename-takeaway-wines
+  cancel-in-progress: false
+
+jobs:
+  rename:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run verified takeaway wine renames'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+      SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Rename and verify takeaway wines
+        run: python -m datahq.rename_takeaway_wines
