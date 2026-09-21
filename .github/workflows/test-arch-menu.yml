@@ -2,15 +2,9 @@ name: Test embedded menu endpoint
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/test-arch-menu.yml"
 
 jobs:
   test:
-    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Test embedded menu endpoint'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -23,5 +17,7 @@ jobs:
           grep -q 'Aperitif' /tmp/menu.html
           grep -q 'Wine by the Glass' /tmp/menu.html
           grep -q 'Snacks & Small Bites' /tmp/menu.html
-          echo "VERIFIED: public menu endpoint returned expected HTML"
+          grep -q 'Strawberry Lime Spritz' /tmp/menu.html
+          grep -q 'Moretti' /tmp/menu.html
+          echo "VERIFIED: public menu endpoint returned expected live HTML"
           wc -c /tmp/menu.html
