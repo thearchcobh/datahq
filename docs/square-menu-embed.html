@@ -18,16 +18,21 @@
   }
   #arch-menu-app .arch-tabs{
     display:flex;
+    width:100%;
+    min-width:0;
     gap:0;
-    overflow-x:scroll;
-    overflow-y:hidden;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
     scrollbar-width:none;
     padding:0 38px;
     scroll-behavior:smooth;
     -webkit-overflow-scrolling:touch;
     touch-action:pan-x;
     overscroll-behavior-x:contain;
+    cursor:grab;
+    user-select:none;
   }
+  #arch-menu-app .arch-tabs.is-dragging{cursor:grabbing;scroll-behavior:auto}
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
   #arch-menu-app .arch-tab{
     position:relative;
@@ -115,6 +120,7 @@
   #arch-menu-app .arch-wine-price{align-items:center;gap:6px}
   #arch-menu-app .arch-slash{color:var(--muted)}
   #arch-menu-app .arch-badge{
+    position:relative;
     display:inline-block;
     vertical-align:1px;
     border:1px solid var(--line);
@@ -124,7 +130,31 @@
     font-size:9px;
     letter-spacing:.04em;
     color:var(--muted);
-    cursor:default;
+    cursor:default !important;
+  }
+  #arch-menu-app .arch-badge::after{
+    content:attr(data-tooltip);
+    position:absolute;
+    left:50%;
+    bottom:calc(100% + 7px);
+    transform:translateX(-50%);
+    z-index:20;
+    background:var(--ink);
+    color:#fff;
+    border-radius:4px;
+    padding:5px 7px;
+    font:500 11px/1.2 Arial,Helvetica,sans-serif;
+    letter-spacing:0;
+    white-space:nowrap;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+    transition:opacity .12s ease,visibility .12s ease;
+  }
+  #arch-menu-app .arch-badge:hover::after,
+  #arch-menu-app .arch-badge:focus-visible::after{
+    opacity:1;
+    visibility:visible;
   }
   #arch-menu-app .arch-note{font-size:12px;line-height:1.45;color:var(--muted);margin:18px 0 0}
 
@@ -206,7 +236,7 @@
     var meta=[item.grape,item.country?'('+item.country+')':''].filter(Boolean).join(' ');
     var badges=(item.certifications||[]).map(function(c){
       var full=certificationTitles[c]||c;
-      return '<span class="arch-badge" title="'+esc(full)+'" aria-label="'+esc(full)+'">'+esc(c)+'</span>';
+      return '<span class="arch-badge" data-tooltip="'+esc(full)+'" aria-label="'+esc(full)+'" tabindex="0">'+esc(c)+'</span>';
     }).join('');
 
     return '<article class="arch-item">'+
@@ -301,6 +331,61 @@
 
     if(tabsScroller){
       tabsScroller.addEventListener('scroll',updateScrollCue,{passive:true});
+
+      // Mouse/trackpad wheel: turn vertical wheel movement into horizontal menu scrolling.
+      tabsScroller.addEventListener('wheel',function(e){
+        var maxScroll=Math.max(0,tabsScroller.scrollWidth-tabsScroller.clientWidth);
+        if(maxScroll<=4) return;
+        var delta=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+        if(!delta) return;
+        e.preventDefault();
+        tabsScroller.scrollLeft+=delta;
+        updateScrollCue();
+      },{passive:false});
+
+      // Desktop mouse drag, while retaining normal touch swiping.
+      var dragActive=false;
+      var dragMoved=false;
+      var dragStartX=0;
+      var dragStartScroll=0;
+
+      tabsScroller.addEventListener('pointerdown',function(e){
+        if(e.pointerType==='touch') return;
+        dragActive=true;
+        dragMoved=false;
+        dragStartX=e.clientX;
+        dragStartScroll=tabsScroller.scrollLeft;
+        tabsScroller.classList.add('is-dragging');
+        try{tabsScroller.setPointerCapture(e.pointerId);}catch(_){}
+      });
+
+      tabsScroller.addEventListener('pointermove',function(e){
+        if(!dragActive) return;
+        var dx=e.clientX-dragStartX;
+        if(Math.abs(dx)>4) dragMoved=true;
+        tabsScroller.scrollLeft=dragStartScroll-dx;
+        updateScrollCue();
+      });
+
+      function endDrag(e){
+        if(!dragActive) return;
+        dragActive=false;
+        tabsScroller.classList.remove('is-dragging');
+        try{tabsScroller.releasePointerCapture(e.pointerId);}catch(_){}
+        window.setTimeout(function(){dragMoved=false;},0);
+      }
+      tabsScroller.addEventListener('pointerup',endDrag);
+      tabsScroller.addEventListener('pointercancel',endDrag);
+      tabsScroller.addEventListener('pointerleave',function(e){
+        if(dragActive&&e.buttons===0) endDrag(e);
+      });
+
+      tabsScroller.addEventListener('click',function(e){
+        if(dragMoved){
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      },true);
     }
     if(scrollLeftButton){
       scrollLeftButton.addEventListener('click',function(){
