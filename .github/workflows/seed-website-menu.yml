@@ -1,0 +1,44 @@
+name: Seed Square website menu flags
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/datahq/seed_website_menu.py"
+      - ".github/workflows/seed-website-menu.yml"
+
+concurrency:
+  group: square-website-menu-seed
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message == 'Run website menu flag seed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+      SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Seed and verify website menu flags
+        run: python -m datahq.seed_website_menu
