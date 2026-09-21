@@ -3,7 +3,7 @@
 </div>
 
 <style>
-  #arch-menu-app{--paper:#fbfaf7;--ink:#22211e;--muted:#766f66;--line:#ded9d0;--accent:#6e263a;max-width:980px;margin:0 auto;padding:8px 18px 28px;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+  #arch-menu-app{--paper:#fbfaf7;--ink:#22211e;--muted:#766f66;--line:#ded9d0;--accent:#6e263a;width:100%;max-width:980px;min-width:0;margin:0 auto;padding:8px 18px 28px;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   #arch-menu-app *{box-sizing:border-box}
   #arch-menu-app .arch-menu-status{padding:30px 0;color:var(--muted)}
   #arch-menu-app .arch-tab-control{
@@ -142,11 +142,16 @@
   #arch-menu-app .arch-wine-group{margin:27px 0 0}
   #arch-menu-app .arch-wine-group:first-child{margin-top:0}
   #arch-menu-app .arch-wine-group>h3{font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:500;margin:0;padding:0 0 8px;border-bottom:1px solid var(--ink)}
+  #arch-menu-app .arch-panels,
+  #arch-menu-app .arch-panel,
+  #arch-menu-app .arch-item,
+  #arch-menu-app .arch-item-copy{min-width:0;max-width:100%}
   #arch-menu-app .arch-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;padding:14px 0;border-bottom:1px solid var(--line)}
-  #arch-menu-app .arch-item-copy h4{font-size:15px;line-height:1.35;margin:0;font-weight:650}
+  #arch-menu-app .arch-item-copy{overflow-wrap:anywhere}
+  #arch-menu-app .arch-item-copy h4{font-size:15px;line-height:1.35;margin:0;font-weight:650;overflow-wrap:anywhere}
   #arch-menu-app .arch-item-copy p{font-size:13px;line-height:1.45;color:var(--muted);margin:5px 0 0}
   #arch-menu-app .arch-item-copy .arch-tasting{font-family:Georgia,'Times New Roman',serif;font-style:italic}
-  #arch-menu-app .arch-price{display:flex;gap:10px;align-items:flex-start;white-space:nowrap;text-align:right;font-size:14px}
+  #arch-menu-app .arch-price{display:flex;gap:10px;align-items:flex-start;min-width:0;white-space:nowrap;text-align:right;font-size:14px}
   #arch-menu-app .arch-price-piece{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
   #arch-menu-app .arch-var-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   #arch-menu-app .arch-wine-price{align-items:center;gap:6px}
@@ -189,6 +194,7 @@
     visibility:visible;
   }
   #arch-menu-app .arch-note{font-size:12px;line-height:1.45;color:var(--muted);margin:18px 0 0}
+  #arch-menu-app .arch-build{margin-top:28px;padding-top:10px;border-top:1px solid var(--line);font-size:10px;line-height:1.3;color:var(--muted);text-align:right;letter-spacing:.03em}
 
   @media(max-width:600px){
     #arch-menu-app{padding:6px 13px 22px}
@@ -197,10 +203,13 @@
     #arch-menu-app .arch-tab:first-child{padding-left:0}
     #arch-menu-app .arch-tab.is-active::before{left:13px;right:13px}
     #arch-menu-app h2{font-size:29px}
-    #arch-menu-app .arch-item{gap:12px;padding:13px 0}
-    #arch-menu-app .arch-item-copy h4{font-size:14px}
-    #arch-menu-app .arch-item-copy p{font-size:12.5px}
-    #arch-menu-app .arch-price{font-size:13px}
+    #arch-menu-app .arch-item{grid-template-columns:minmax(0,1fr) minmax(64px,34%);gap:10px;padding:13px 0;width:100%;max-width:100%}
+    #arch-menu-app .arch-item-copy{min-width:0;max-width:100%}
+    #arch-menu-app .arch-item-copy h4{font-size:14px;overflow-wrap:anywhere}
+    #arch-menu-app .arch-item-copy p{font-size:12.5px;overflow-wrap:anywhere}
+    #arch-menu-app .arch-price{width:100%;max-width:none;min-width:0;gap:6px;font-size:13px;white-space:normal;flex-wrap:wrap;justify-content:flex-end}
+    #arch-menu-app .arch-price-piece{min-width:0;max-width:100%}
+    #arch-menu-app .arch-wine-price{justify-content:flex-end;flex-wrap:wrap}
     #arch-menu-app .arch-wine-group>h3{font-size:19px}
   }
 </style>
@@ -333,7 +342,7 @@
     panels+=panel('digestif','Drinks','Digestif',(s.digestif||[]).map(simpleItem).join(''));
     panels+=panel('soft','Drinks','Best of the Rest',(s.soft||[]).map(simpleItem).join(''),'<p class="arch-note">Full range of teas & coffees available.</p>');
 
-    root.innerHTML=nav+'<div class="arch-panels">'+panels+'</div>';
+    root.innerHTML=nav+'<div class="arch-panels">'+panels+'</div><div class="arch-build">Menu build v0.1.0</div>';
 
     var tabsWrap=root.querySelector('.arch-tabs-wrap');
     var tabsScroller=root.querySelector('.arch-tabs');
