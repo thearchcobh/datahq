@@ -33,10 +33,11 @@
     overflow-x:auto !important;
     overflow-y:hidden !important;
     scrollbar-width:none;
-    padding:0 38px;
+    padding:0 38px 0 0;
     scroll-behavior:smooth;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior-x:contain;
+    touch-action:pan-y;
   }
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
   #arch-menu-app .arch-tab{
@@ -53,7 +54,7 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  #arch-menu-app .arch-tab:first-child{padding-left:2px}
+  #arch-menu-app .arch-tab:first-child{padding-left:0}
   #arch-menu-app .arch-tab:not(:last-child)::after{
     content:"";
     position:absolute;
@@ -90,7 +91,7 @@
     height:1px;
     background:var(--ink);
   }
-  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-tabs-wrap label[for="arch-tab-snacks"]::before{left:2px}
+  #arch-menu-app .arch-tab-control[value="snacks"]:checked ~ .arch-tabs-wrap label[for="arch-tab-snacks"]::before{left:0}
 
   #arch-menu-app .arch-scroll-arrow{
     position:absolute;
@@ -193,9 +194,8 @@
     #arch-menu-app{padding:6px 13px 22px}
     #arch-menu-app .arch-tabs-wrap{padding-top:6px}
     #arch-menu-app .arch-tab{padding:9px 13px;font-size:12.5px}
-    #arch-menu-app .arch-tab:first-child{padding-left:2px}
+    #arch-menu-app .arch-tab:first-child{padding-left:0}
     #arch-menu-app .arch-tab.is-active::before{left:13px;right:13px}
-    #arch-menu-app .arch-tab:first-child.is-active::before{left:2px}
     #arch-menu-app h2{font-size:29px}
     #arch-menu-app .arch-item{gap:12px;padding:13px 0}
     #arch-menu-app .arch-item-copy h4{font-size:14px}
@@ -367,6 +367,52 @@
     if(tabsScroller){
       tabsScroller.addEventListener('scroll',updateScrollCue,{passive:true});
 
+      // Square's mobile embed can swallow native horizontal overflow gestures.
+      // Handle touch dragging ourselves, but only after a clear horizontal move,
+      // so a normal tap on a menu section still activates its label/radio control.
+      var touchId=null;
+      var touchStartX=0;
+      var touchStartY=0;
+      var touchStartScroll=0;
+      var touchDragging=false;
+
+      tabsScroller.addEventListener('pointerdown',function(e){
+        if(e.pointerType!=='touch') return;
+        touchId=e.pointerId;
+        touchStartX=e.clientX;
+        touchStartY=e.clientY;
+        touchStartScroll=tabsScroller.scrollLeft;
+        touchDragging=false;
+      });
+
+      tabsScroller.addEventListener('pointermove',function(e){
+        if(e.pointerType!=='touch'||e.pointerId!==touchId) return;
+        var dx=e.clientX-touchStartX;
+        var dy=e.clientY-touchStartY;
+
+        if(!touchDragging){
+          if(Math.abs(dx)<7) return;
+          if(Math.abs(dx)<=Math.abs(dy)) return;
+          touchDragging=true;
+          try{tabsScroller.setPointerCapture(e.pointerId);}catch(_){}
+        }
+
+        if(e.cancelable) e.preventDefault();
+        tabsScroller.scrollLeft=touchStartScroll-dx;
+        updateScrollCue();
+      });
+
+      function endTouch(e){
+        if(e.pointerId!==touchId) return;
+        if(touchDragging){
+          try{tabsScroller.releasePointerCapture(e.pointerId);}catch(_){}
+        }
+        touchId=null;
+        touchDragging=false;
+      }
+
+      tabsScroller.addEventListener('pointerup',endTouch);
+      tabsScroller.addEventListener('pointercancel',endTouch);
     }
     if(scrollLeftButton){
       scrollLeftButton.addEventListener('click',function(){
