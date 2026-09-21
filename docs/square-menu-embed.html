@@ -29,10 +29,7 @@
     -webkit-overflow-scrolling:touch;
     touch-action:pan-x;
     overscroll-behavior-x:contain;
-    cursor:grab;
-    user-select:none;
   }
-  #arch-menu-app .arch-tabs.is-dragging{cursor:grabbing;scroll-behavior:auto}
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
   #arch-menu-app .arch-tab{
     position:relative;
@@ -343,49 +340,6 @@
         updateScrollCue();
       },{passive:false});
 
-      // Desktop mouse drag, while retaining normal touch swiping.
-      var dragActive=false;
-      var dragMoved=false;
-      var dragStartX=0;
-      var dragStartScroll=0;
-
-      tabsScroller.addEventListener('pointerdown',function(e){
-        if(e.pointerType==='touch') return;
-        dragActive=true;
-        dragMoved=false;
-        dragStartX=e.clientX;
-        dragStartScroll=tabsScroller.scrollLeft;
-        tabsScroller.classList.add('is-dragging');
-        try{tabsScroller.setPointerCapture(e.pointerId);}catch(_){}
-      });
-
-      tabsScroller.addEventListener('pointermove',function(e){
-        if(!dragActive) return;
-        var dx=e.clientX-dragStartX;
-        if(Math.abs(dx)>4) dragMoved=true;
-        tabsScroller.scrollLeft=dragStartScroll-dx;
-        updateScrollCue();
-      });
-
-      function endDrag(e){
-        if(!dragActive) return;
-        dragActive=false;
-        tabsScroller.classList.remove('is-dragging');
-        try{tabsScroller.releasePointerCapture(e.pointerId);}catch(_){}
-        window.setTimeout(function(){dragMoved=false;},0);
-      }
-      tabsScroller.addEventListener('pointerup',endDrag);
-      tabsScroller.addEventListener('pointercancel',endDrag);
-      tabsScroller.addEventListener('pointerleave',function(e){
-        if(dragActive&&e.buttons===0) endDrag(e);
-      });
-
-      tabsScroller.addEventListener('click',function(e){
-        if(dragMoved){
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      },true);
     }
     if(scrollLeftButton){
       scrollLeftButton.addEventListener('click',function(){
