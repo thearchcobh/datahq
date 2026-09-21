@@ -1,0 +1,29 @@
+<div id="arch-menu-embed" style="width:100%;max-width:1040px;margin:0 auto;">
+  <iframe
+    id="arch-menu-frame"
+    src="https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu"
+    title="The Arch menu"
+    loading="lazy"
+    scrolling="no"
+    style="display:block;width:100%;min-height:900px;border:0;background:transparent;"
+  ></iframe>
+</div>
+
+<script>
+(function () {
+  var frame = document.getElementById('arch-menu-frame');
+  if (!frame) return;
+
+  var allowedOrigin = 'https://tqrgwcixxifzdzsphdxj.supabase.co';
+
+  window.addEventListener('message', function (event) {
+    if (event.origin !== allowedOrigin) return;
+    if (!event.data || event.data.type !== 'arch-menu-height') return;
+
+    var height = Number(event.data.height);
+    if (!Number.isFinite(height)) return;
+
+    frame.style.height = Math.max(500, Math.min(height, 5000)) + 'px';
+  });
+})();
+</script>
