@@ -6,11 +6,95 @@
   #arch-menu-app{--paper:#fbfaf7;--ink:#22211e;--muted:#766f66;--line:#ded9d0;--accent:#6e263a;max-width:980px;margin:0 auto;padding:8px 18px 28px;color:var(--ink);font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
   #arch-menu-app *{box-sizing:border-box}
   #arch-menu-app .arch-menu-status{padding:30px 0;color:var(--muted)}
-  #arch-menu-app .arch-tabs-wrap{position:sticky;top:0;z-index:5;background:rgba(251,250,247,.97);backdrop-filter:blur(8px);padding:10px 0 12px;border-bottom:1px solid var(--line)}
-  #arch-menu-app .arch-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 1px}
+
+  #arch-menu-app .arch-tabs-wrap{
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:rgba(251,250,247,.97);
+    backdrop-filter:blur(8px);
+    padding:8px 0 10px;
+    border-bottom:1px solid var(--line);
+  }
+  #arch-menu-app .arch-tabs{
+    display:flex;
+    gap:0;
+    overflow-x:auto;
+    scrollbar-width:none;
+    padding:0 34px 0 0;
+    scroll-behavior:smooth;
+  }
   #arch-menu-app .arch-tabs::-webkit-scrollbar{display:none}
-  #arch-menu-app .arch-tab{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer}
-  #arch-menu-app .arch-tab.is-active{background:var(--ink);border-color:var(--ink);color:#fff}
+  #arch-menu-app .arch-tab{
+    position:relative;
+    flex:0 0 auto;
+    border:0;
+    background:transparent;
+    color:var(--muted);
+    padding:10px 15px;
+    font-size:13px;
+    line-height:1.2;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  #arch-menu-app .arch-tab:first-child{padding-left:2px}
+  #arch-menu-app .arch-tab:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    right:0;
+    top:50%;
+    width:1px;
+    height:15px;
+    background:var(--line);
+    transform:translateY(-50%);
+  }
+  #arch-menu-app .arch-tab.is-active{color:var(--ink)}
+  #arch-menu-app .arch-tab.is-active::before{
+    content:"";
+    position:absolute;
+    left:15px;
+    right:15px;
+    bottom:3px;
+    height:1px;
+    background:var(--ink);
+  }
+  #arch-menu-app .arch-tab:first-child.is-active::before{left:2px}
+
+  #arch-menu-app .arch-tabs-wrap::after,
+  #arch-menu-app .arch-tabs-wrap::before{
+    position:absolute;
+    top:0;
+    bottom:1px;
+    width:46px;
+    display:flex;
+    align-items:center;
+    font-size:22px;
+    font-weight:400;
+    color:var(--ink);
+    pointer-events:none;
+    transition:opacity .18s ease;
+  }
+  #arch-menu-app .arch-tabs-wrap::after{
+    content:"›";
+    right:0;
+    justify-content:flex-end;
+    padding-right:3px;
+    background:linear-gradient(to right,rgba(251,250,247,0),rgba(251,250,247,.96) 55%);
+    opacity:1;
+  }
+  #arch-menu-app .arch-tabs-wrap.is-at-end::after{opacity:0}
+  #arch-menu-app .arch-tabs-wrap::before{
+    content:"‹";
+    left:0;
+    justify-content:flex-start;
+    padding-left:3px;
+    background:linear-gradient(to left,rgba(251,250,247,0),rgba(251,250,247,.96) 55%);
+    opacity:0;
+    z-index:2;
+  }
+  #arch-menu-app .arch-tabs-wrap.has-left-scroll::before{opacity:1}
+
   #arch-menu-app .arch-panel{display:none;padding-top:28px}
   #arch-menu-app .arch-panel.is-active{display:block}
   #arch-menu-app .arch-section-head{margin:0 0 18px}
@@ -28,11 +112,27 @@
   #arch-menu-app .arch-var-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
   #arch-menu-app .arch-wine-price{align-items:center;gap:6px}
   #arch-menu-app .arch-slash{color:var(--muted)}
-  #arch-menu-app .arch-badge{display:inline-block;vertical-align:1px;border:1px solid var(--line);border-radius:4px;padding:1px 4px;margin-left:4px;font-size:9px;letter-spacing:.04em;color:var(--muted)}
+  #arch-menu-app .arch-badge{
+    display:inline-block;
+    vertical-align:1px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:1px 4px;
+    margin-left:4px;
+    font-size:9px;
+    letter-spacing:.04em;
+    color:var(--muted);
+    cursor:help;
+  }
   #arch-menu-app .arch-note{font-size:12px;line-height:1.45;color:var(--muted);margin:18px 0 0}
+
   @media(max-width:600px){
     #arch-menu-app{padding:6px 13px 22px}
-    #arch-menu-app .arch-tabs-wrap{padding-top:7px}
+    #arch-menu-app .arch-tabs-wrap{padding-top:6px}
+    #arch-menu-app .arch-tab{padding:9px 13px;font-size:12.5px}
+    #arch-menu-app .arch-tab:first-child{padding-left:2px}
+    #arch-menu-app .arch-tab.is-active::before{left:13px;right:13px}
+    #arch-menu-app .arch-tab:first-child.is-active::before{left:2px}
     #arch-menu-app h2{font-size:29px}
     #arch-menu-app .arch-item{gap:12px;padding:13px 0}
     #arch-menu-app .arch-item-copy h4{font-size:14px}
@@ -49,6 +149,12 @@
 
   var endpoint='https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu';
   var wineStyles=['Sparkling','Rosé','Orange / Skin Contact','White','Red'];
+  var certificationTitles={
+    'O':'Organic',
+    'HVE':'High Environmental Value',
+    'Bio':'Biodynamic',
+    'V':'Vegan'
+  };
 
   function esc(value){
     return String(value==null?'':value)
@@ -96,7 +202,10 @@
     }
 
     var meta=[item.grape,item.country?'('+item.country+')':''].filter(Boolean).join(' ');
-    var badges=(item.certifications||[]).map(function(c){return '<span class="arch-badge">'+esc(c)+'</span>';}).join('');
+    var badges=(item.certifications||[]).map(function(c){
+      var full=certificationTitles[c]||c;
+      return '<span class="arch-badge" title="'+esc(full)+'" aria-label="'+esc(full)+'">'+esc(c)+'</span>';
+    }).join('');
 
     return '<article class="arch-item">'+
       '<div class="arch-item-copy"><h4>'+esc(item.display_name||item.name)+' '+badges+'</h4>'+
@@ -126,14 +235,14 @@
   function render(data){
     var s=data.sections||{};
     var tabs=[
+      ['snacks','Snacks & Small Bites'],
+      ['plates','Sharing Plates'],
       ['aperitif','Aperitif'],
       ['wine-glass','Wine by the Glass'],
       ['wine-bottle','Wine by the Bottle'],
       ['beer','Beer & Cider'],
       ['digestif','Digestif'],
-      ['soft','Best of the Rest'],
-      ['snacks','Snacks & Small Bites'],
-      ['plates','Sharing Plates']
+      ['soft','Best of the Rest']
     ];
 
     var nav='<div class="arch-tabs-wrap"><div class="arch-tabs">'+tabs.map(function(t,i){
@@ -143,26 +252,53 @@
     var legend='<p class="arch-note">O = Organic · HVE = High Environmental Value · Bio = Biodynamic · V = Vegan</p>';
 
     var panels='';
+    panels+=panel('snacks','Food · from 2pm','Snacks & Small Bites',(s.snacks||[]).map(simpleItem).join(''));
+    panels+=panel('plates','Food · from 2pm','Sharing Plates',(s.plates||[]).map(simpleItem).join(''));
     panels+=panel('aperitif','Drinks','Aperitif',(s.aperitif||[]).map(simpleItem).join(''));
     panels+=panel('wine-glass','Wine','By the Glass',winePanel(s.wine_glass,'glass'),legend);
     panels+=panel('wine-bottle','Wine','By the Bottle',winePanel(s.wine_bottle,'bottle'),legend);
     panels+=panel('beer','Drinks','Beer & Cider',(s.beer||[]).map(simpleItem).join(''));
     panels+=panel('digestif','Drinks','Digestif',(s.digestif||[]).map(simpleItem).join(''));
     panels+=panel('soft','Drinks','Best of the Rest',(s.soft||[]).map(simpleItem).join(''),'<p class="arch-note">Full range of teas & coffees available.</p>');
-    panels+=panel('snacks','Food · from 2pm','Snacks & Small Bites',(s.snacks||[]).map(simpleItem).join(''));
-    panels+=panel('plates','Food · from 2pm','Sharing Plates',(s.plates||[]).map(simpleItem).join(''));
 
     root.innerHTML=nav+panels;
 
+    var tabsWrap=root.querySelector('.arch-tabs-wrap');
+    var tabsScroller=root.querySelector('.arch-tabs');
     var buttons=[].slice.call(root.querySelectorAll('.arch-tab'));
     var panelEls=[].slice.call(root.querySelectorAll('.arch-panel'));
+
+    function updateScrollCue(){
+      if(!tabsWrap||!tabsScroller) return;
+      var maxScroll=Math.max(0,tabsScroller.scrollWidth-tabsScroller.clientWidth);
+      var hasOverflow=maxScroll>4;
+      tabsWrap.classList.toggle('has-left-scroll',hasOverflow&&tabsScroller.scrollLeft>4);
+      tabsWrap.classList.toggle('is-at-end',!hasOverflow||tabsScroller.scrollLeft>=maxScroll-4);
+    }
 
     function select(key){
       buttons.forEach(function(b){b.classList.toggle('is-active',b.getAttribute('data-tab')===key);});
       panelEls.forEach(function(p){p.classList.toggle('is-active',p.getAttribute('data-panel')===key);});
+
+      var active=buttons.find(function(b){return b.getAttribute('data-tab')===key;});
+      if(active&&active.scrollIntoView){
+        active.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'});
+      }
+      window.setTimeout(updateScrollCue,220);
     }
-    buttons.forEach(function(b){b.addEventListener('click',function(){select(b.getAttribute('data-tab'));});});
-    select('aperitif');
+
+    buttons.forEach(function(b){
+      b.addEventListener('click',function(){select(b.getAttribute('data-tab'));});
+    });
+
+    if(tabsScroller){
+      tabsScroller.addEventListener('scroll',updateScrollCue,{passive:true});
+    }
+    window.addEventListener('resize',updateScrollCue);
+
+    select('snacks');
+    window.setTimeout(updateScrollCue,0);
+    window.setTimeout(updateScrollCue,250);
   }
 
   fetch(endpoint,{method:'GET',mode:'cors'})
