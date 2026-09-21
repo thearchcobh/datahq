@@ -13,15 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Fetch public menu
+      - name: Fetch public menu data
         run: |
           set -euo pipefail
           url="https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu"
-          curl --fail --silent --show-error --location -D /tmp/headers.txt "$url" -o /tmp/menu.html
+          curl --fail --silent --show-error --location -D /tmp/headers.txt "$url" -o /tmp/menu.json
           echo "=== HEADERS ==="
           cat /tmp/headers.txt
-          echo "=== FIRST LINES ==="
-          head -n 8 /tmp/menu.html
-          grep -qi '^content-type: text/html' /tmp/headers.txt
-          grep -q '<title>The Arch Menu</title>' /tmp/menu.html
-          echo "VERIFIED: endpoint is returning HTML with an HTML content type"
+          grep -qi '^content-type: application/json' /tmp/headers.txt
+          grep -qi '^access-control-allow-origin: \*' /tmp/headers.txt
+          python - <<'PY'
+          import json
+          with open('/tmp/menu.json', encoding='utf-8') as f:
+              data=json.load(f)
+          s=data['sections']
+          assert any(x['name']=='Strawberry Lime Spritz' for x in s['aperitif'])
+          assert any(x['name']=='Moretti' for x in s['beer'])
+          assert any(x['name']=='Aromes De Celler Cava Brut' for x in s['wine_glass'])
+          assert any(x['name']=='Irish Burrata & Mortadella' for x in s['plates'])
+          print('VERIFIED: JSON menu endpoint and CORS headers are correct')
+          PY
