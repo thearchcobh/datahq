@@ -2,11 +2,6 @@ name: Test embedded menu endpoint
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/test-arch-menu.yml"
 
 jobs:
   test:
@@ -18,8 +13,6 @@ jobs:
           set -euo pipefail
           url="https://tqrgwcixxifzdzsphdxj.supabase.co/functions/v1/arch-menu"
           curl --fail --silent --show-error --location -D /tmp/headers.txt "$url" -o /tmp/menu.json
-          echo "=== HEADERS ==="
-          cat /tmp/headers.txt
           grep -qi '^content-type: application/json' /tmp/headers.txt
           grep -qi '^access-control-allow-origin: \*' /tmp/headers.txt
           python - <<'PY'
