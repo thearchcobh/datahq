@@ -1,0 +1,38 @@
+name: Update beer and cider descriptions
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/datahq/beer_cider_descriptions.py"
+      - ".github/workflows/update-beer-cider-descriptions.yml"
+
+concurrency:
+  group: square-beer-cider-descriptions
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update descriptions
+        run: python -m datahq.beer_cider_descriptions
