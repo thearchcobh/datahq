@@ -9,7 +9,7 @@ import uuid
 from .square import request_json
 
 
-DESCRIPTION_UPDATES = {
+# Serving sizes confirmed from the 21 September 2026 physical stocktake.\nDESCRIPTION_UPDATES = {
     "NAPYELUYY5M5GKBQRCEPLGIC": ("Kinsale Pale Ale", "500ml bottle"),
     "A6U3E5YBDSQHCYMI45WQOBNN": ("Peroni", "330ml bottle"),
     "75QW4PVMHPB6KS2D7HI3ODWE": ("Peroni 0.0%", "330ml bottle, 0% ABV"),
