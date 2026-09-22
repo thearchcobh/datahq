@@ -2,10 +2,6 @@ name: Update beer and cider descriptions
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "src/datahq/beer_cider_descriptions.py"
-      - ".github/workflows/update-beer-cider-descriptions.yml"
 
 concurrency:
   group: square-beer-cider-descriptions
