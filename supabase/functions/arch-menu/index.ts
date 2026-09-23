@@ -3,6 +3,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 type Json = Record<string, any>;
 
 const WEBSITE_MENU_NAME = "Website Menu";
+// Website-only experiment: number wines within each style section. Flip to false to revert instantly.
+const SHOW_WINE_SECTION_NUMBERS = true;
 const STYLE_UIDS: Record<string, string> = {
   PIINJMUPVL2I36YGBMMI6APH: "Sparkling",
   ABPHBWJAN5OPJ5QGT4VDGM4F: "Rosé",
@@ -190,6 +192,24 @@ Deno.serve(async (req: Request) => {
         if (a.style !== b.style) return Object.values(STYLE_UIDS).indexOf(a.style) - Object.values(STYLE_UIDS).indexOf(b.style);
         return rank(a.name,WINE_ORDER[ak] ?? []) - rank(b.name,WINE_ORDER[bk] ?? []);
       });
+
+    if (SHOW_WINE_SECTION_NUMBERS) {
+      const styleOrder = ["Sparkling", "Rosé", "Orange / Skin Contact", "White", "Red"];
+      for (const style of styleOrder) {
+        const sectionItems = [
+          ...wineGlass.filter((x:any) => x.style === style),
+          ...wineBottle.filter((x:any) => x.style === style),
+        ];
+        const seen = new Set<string>();
+        let number = 1;
+        for (const item of sectionItems) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          item.display_name = `${number} · ${item.display_name}`;
+          number += 1;
+        }
+      }
+    }
 
     return Response.json({
       generated_at: new Date().toISOString(),
