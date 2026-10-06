@@ -1,0 +1,20 @@
+name: Square vendor and SKU backfill
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+      DRY_RUN: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit/update Square wine vendor fields
+        run: python3 scripts/square_vendor_backfill.py
