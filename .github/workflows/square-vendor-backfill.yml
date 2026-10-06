@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
-      DRY_RUN: "1"
+      DRY_RUN: "0"
     steps:
       - uses: actions/checkout@v4
       - name: Audit/update Square wine vendor fields
