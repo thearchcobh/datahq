@@ -75,7 +75,7 @@ def main() -> int:
     else:
         updated = copy.deepcopy(target)
         updated_variation = get_variation(updated, TARGET_VARIATION_ID, "Regular")
-        updated_variation["item_variation_data"]["default_unit_cost"] = copy.deepcopy(source_cost)
+        updated_variation["item_variation_data"]["vendor_information"] = [{"unit_cost_money": copy.deepcopy(source_cost)}]
 
         result = request_json(
             "POST", "/v2/catalog/object", token,
@@ -90,8 +90,11 @@ def main() -> int:
 
     live = get_item(token, TARGET_ITEM_ID, TARGET_ITEM_NAME)
     verified = get_variation(live, TARGET_VARIATION_ID, "Regular")["item_variation_data"]
+    vendor_info = verified.get("vendor_information") or []
+    if not vendor_info or (vendor_info[0].get("unit_cost_money") or {}) != source_cost:
+        raise RuntimeError(f"Square vendor information read-back verification failed: {vendor_info}")
     if (verified.get("default_unit_cost") or {}) != source_cost:
-        raise RuntimeError("Square read-back verification failed")
+        raise RuntimeError(f"Square default unit cost not reflected after vendor update: {verified.get('default_unit_cost')}")
     if ((verified.get("price_money") or {}).get("amount")) != TARGET_PRICE_CENTS:
         raise RuntimeError("Square read-back verification found an unexpected price change")
     print("VERIFIED live Square: cost €14.31, price €31.90")
