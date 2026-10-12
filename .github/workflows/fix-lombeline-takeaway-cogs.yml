@@ -1,0 +1,36 @@
+name: Fix Lombeline takeaway unit cost
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/datahq/fix_lombeline_takeaway_cogs.py"
+
+concurrency:
+  group: square-lombeline-takeaway-cogs
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Set unit cost in live Square and verify
+        run: python -m datahq.fix_lombeline_takeaway_cogs
