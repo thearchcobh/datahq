@@ -1,3 +1,4 @@
+import widgetBundle from './widget-bundle.mjs';
 import { calculate,day,monday,addDays,midnight } from './calculate.mjs';
 // Only the SHA-256 of a dedicated, revocable widget credential is deployed.
 // No database credential is supplied to the iPhone.
@@ -9,6 +10,7 @@ Deno.serve(async(req:Request)=>{
  if(req.method!=='GET')return reply({error:'Method not allowed'},405);
  const token=req.headers.get('Authorization')?.replace(/^Bearer /,'')||'';
  if(!/^[a-f0-9]{64}$/.test(token)||await hash(token)!==TOKEN_HASH)return reply({error:'Unauthorized'},401);
+ if(new URL(req.url).searchParams.get('asset')==='widget')return reply(widgetBundle);
  try {
   const base=Deno.env.get('SUPABASE_URL')!, key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   async function rows(table:string,params:Record<string,string>){

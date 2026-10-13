@@ -20,3 +20,9 @@ Personal installation copies may embed the dedicated token in INSTALL_TOKEN. Tre
 `supabase/functions/arch-labour-widget/index.ts` is a read-only GET endpoint. It authenticates a dedicated 256-bit token by comparing SHA-256 before any database query. `verify_jwt=false` is required because custom authentication is implemented in the handler. No CORS/public financial endpoint, staff names, raw records or service-role keys are returned. Responses use Cache-Control: no-store. The server uses its existing service-role environment credential, and all database requests are fixed read-only queries. No database schema or RLS modifications.
 
 Run `node tests/labour-widget.test.mjs`. Deployment must include index.ts and calculate.mjs. Verify missing/wrong tokens return 401 and the authorized request returns only the summary. iOS widget layout and refresh cadence require an actual device check.
+
+## Hosted updates (v1.1)
+
+Replace the on-device script with `Arch-Labour-Loader.js`, keeping its name and Home Screen selection. It reuses the existing Keychain token. The authenticated `?asset=widget` endpoint returns a protocol-versioned JS body. The loader executes only this fixed HTTPS source and saves the bundle after it successfully returns a widget. Download/compile/runtime failures fall back to the previous working bundle. An authorization rejection removes the code cache. The saved-code fallback is labelled. First installation requires connectivity.
+
+Edit `widgets/Arch-Labour-Remote.js` to change the widget, regenerate `widget-bundle.mjs` with `python widgets/build-widget-bundle.py VERSION`, then deploy all three Edge Function files together. The loader checks for updates on every execution; iOS controls when Home Screen execution occurs. Source edits alone do not publish: deployment is required. The local loader is trusted to execute authenticated hosted code; never change its host to an untrusted URL. No token is present in the bundle or loader.
