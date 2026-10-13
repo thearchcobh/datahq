@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {calculate,midnight,monday} from '../supabase/functions/arch-labour-widget/calculate.mjs';
+const base={asOf:'2026-10-13T12:00:00Z',now:Date.parse('2026-10-13T12:05:00Z'),sales:[{trading_date:'2026-10-13',closed_at:'2026-10-13T11:00:00Z',sales_ex_vat_eur:100}],cards:[{team_member_id:'a',start_at:'2026-10-13T10:00:00Z',end_at:null,status:'OPEN',hourly_rate_amount:1000,raw_json:{}}],opening:[],rates:[{effective_from:'2026-01-01',weekly_threshold_eur:552,lower_employer_rate:.0915,higher_employer_rate:.114}],pension:[{effective_from:'2026-01-01',employer_rate:.015}],overrides:[],settings:[{key:'default_annual_leave_accrual_rate',value_json:.08},{key:'default_other_employer_cost_rate',value_json:0}]};
+const result=calculate(base);assert.equal(result.today.labour,23.90);assert.equal(result.today.pct,23.90);assert.equal(result.today.openShifts,1);
+assert.equal(calculate({...base,sales:[]}).today.pct,null);
+assert.equal(calculate({...base,now:base.now+7200000}).today.labour,23.90);assert.equal(calculate({...base,now:base.now+7200000}).stale,true);
+assert.equal(calculate({...base,cards:[{...base.cards[0],hourly_rate_amount:null}]}).today.pct,null);
+const unpaid={...base.cards[0],raw_json:{breaks:[{start_at:'2026-10-13T11:00:00Z',end_at:'2026-10-13T11:30:00Z',is_paid:false}]}};
+assert.equal(calculate({...base,cards:[unpaid]}).today.labour,17.93);
+const previous={team_member_id:'b',start_at:'2026-10-12T10:00:00Z',end_at:'2026-10-12T12:00:00Z',hourly_rate_amount:1000};
+const week=calculate({...base,cards:[...base.cards,previous],sales:[...base.sales,{trading_date:'2026-10-12',closed_at:'2026-10-12T11:00:00Z',sales_ex_vat_eur:300}]});assert.equal(week.week.pct,11.95);
+assert.equal(midnight('2026-10-26')-midnight('2026-10-25'),25*3600000);assert.equal(monday('2026-10-18'),'2026-10-12');
+const crossing={...base.cards[0],start_at:'2026-10-12T22:00:00Z',end_at:'2026-10-13T01:00:00Z'};
+assert.equal(calculate({...base,cards:[crossing],opening:[{trading_date:'2026-10-12',close_next_day:true}]}).today.labour,0);
+console.log('Passed: open shifts, matching snapshot, zero sales, missing wages, breaks, weighted week, DST, overnight attribution.');
+const historical=calculate({...base,cards:[...base.cards,{...previous,start_at:'2026-10-09T10:00:00Z',end_at:'2026-10-09T12:00:00Z'}],sales:[...base.sales,{trading_date:'2026-10-09',closed_at:'2026-10-09T11:00:00Z',sales_ex_vat_eur:200}]});
+assert.equal(historical.today.pct,23.90);assert.equal(historical.week.pct,23.90);assert.equal(historical.lastWeek.pct,11.95);assert.equal(historical.lastWeek.start,'2026-10-05');assert.equal(historical.lastWeek.end,'2026-10-11');assert.deepEqual(historical.lastFiveDays.map(x=>x.date),['2026-10-08','2026-10-09','2026-10-10','2026-10-11','2026-10-12']);assert.equal(historical.lastFiveDays[1].pct,11.95);assert.equal(historical.lastFiveDays[0].pct,null);
+console.log('Passed: previous week separate from current, five completed days, individual daily percentages.');
