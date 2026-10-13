@@ -13,3 +13,6 @@ assert.equal(midnight('2026-10-26')-midnight('2026-10-25'),25*3600000);assert.eq
 const crossing={...base.cards[0],start_at:'2026-10-12T22:00:00Z',end_at:'2026-10-13T01:00:00Z'};
 assert.equal(calculate({...base,cards:[crossing],opening:[{trading_date:'2026-10-12',close_next_day:true}]}).today.labour,0);
 console.log('Passed: open shifts, matching snapshot, zero sales, missing wages, breaks, weighted week, DST, overnight attribution.');
+const historical=calculate({...base,cards:[...base.cards,{...previous,start_at:'2026-10-09T10:00:00Z',end_at:'2026-10-09T12:00:00Z'}],sales:[...base.sales,{trading_date:'2026-10-09',closed_at:'2026-10-09T11:00:00Z',sales_ex_vat_eur:200}]});
+assert.equal(historical.today.pct,23.90);assert.equal(historical.week.pct,23.90);assert.equal(historical.lastWeek.pct,11.95);assert.equal(historical.lastWeek.start,'2026-10-05');assert.equal(historical.lastWeek.end,'2026-10-11');assert.deepEqual(historical.lastFiveDays.map(x=>x.date),['2026-10-08','2026-10-09','2026-10-10','2026-10-11','2026-10-12']);assert.equal(historical.lastFiveDays[1].pct,11.95);assert.equal(historical.lastFiveDays[0].pct,null);
+console.log('Passed: previous week separate from current, five completed days, individual daily percentages.');

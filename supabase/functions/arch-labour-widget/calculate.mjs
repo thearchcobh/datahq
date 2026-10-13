@@ -9,7 +9,7 @@ export function midnight(d) {
 const effective=(rows,d)=>rows.filter(r=>r.effective_from<=d&&(!r.effective_to||r.effective_to>=d)).sort((a,b)=>b.effective_from.localeCompare(a.effective_from))[0];
 const round=n=>Math.round(n*100)/100;
 export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,settings}) {
- const date=day(now), week=monday(date), cutoff=Date.parse(asOf), hours=new Map(opening.map(r=>[r.trading_date,r]));
+ const date=day(now), week=monday(date), previousWeek=addDays(week,-7), cutoff=Date.parse(asOf), hours=new Map(opening.map(r=>[r.trading_date,r]));
  const warnings=new Set(), segments=[];
  for(const c of cards) {
   if(c.status==='DELETED') continue;
@@ -20,7 +20,7 @@ export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,
    const a=Math.max(start,midnight(d)), b=Math.min(end,midnight(addDays(d,1)));
    if(b<=a)continue;
    const prev=addDays(d,-1), tradingDate=day(start)===prev&&hours.get(prev)?.close_next_day?prev:d;
-   if(tradingDate<week||tradingDate>date)continue;
+   if(tradingDate<previousWeek||tradingDate>date)continue;
    const unpaid=(c.raw_json?.breaks||[]).filter(x=>x.is_paid===false).reduce((s,x)=>s+Math.max(0,Math.min(b,x.end_at?Date.parse(x.end_at):cutoff)-Math.max(a,Date.parse(x.start_at))),0);
    const worked=Math.max(0,b-a-unpaid)/3600000;
    const rate=c.hourly_rate_amount==null?null:Number(c.hourly_rate_amount)/100;
@@ -39,10 +39,10 @@ export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,
   const prsi=weekly.get(s.member+s.calendarWeek)<=Number(r.weekly_threshold_eur)?Number(r.lower_employer_rate):Number(r.higher_employer_rate);
   s.cost=s.base*(1+Number(leave))*(1+prsi+Number(o.employer_pension_rate??p?.employer_rate??0)+Number(other));
  }
- function period(from){
-  const ss=segments.filter(s=>s.d>=from), ls=sales.filter(s=>s.trading_date>=from&&s.trading_date<=date&&Date.parse(s.closed_at)<=cutoff);
+ function period(from,to=date){
+  const ss=segments.filter(s=>s.d>=from&&s.d<=to), ls=sales.filter(s=>s.trading_date>=from&&s.trading_date<=to&&Date.parse(s.closed_at)<=cutoff);
   const net=ls.reduce((n,s)=>n+Number(s.sales_ex_vat_eur),0), cost=ss.some(s=>s.cost==null)?null:ss.reduce((n,s)=>n+s.cost,0);
   return {sales:round(net),labour:cost==null?null:round(cost),pct:net>0&&cost!=null?round(cost/net*100):null,openShifts:ss.filter(s=>s.open).length};
  }
- return {version:1,date,weekStart:week,asOf,generatedAt:new Date(now).toISOString(),target:32,estimated:true,stale:now-cutoff>90*60000,warnings:[...warnings],today:period(date),week:period(week)};
+ return {version:1,date,weekStart:week,asOf,generatedAt:new Date(now).toISOString(),target:32,estimated:true,stale:now-cutoff>90*60000,warnings:[...warnings],today:period(date),week:period(week),lastWeek:{start:previousWeek,end:addDays(week,-1),...period(previousWeek,addDays(week,-1))},lastFiveDays:Array.from({length:5},(_,i)=>{const d=addDays(date,i-5);return {date:d,...period(d,d)};})};
 }

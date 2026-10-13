@@ -1,7 +1,7 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 import bundle from '../supabase/functions/arch-labour-widget/widget-bundle.mjs';
 const source=fs.readFileSync('widgets/Arch-Labour-Loader.js','utf8');
-const data={version:1,date:'2026-10-13',asOf:'2026-10-13T17:35:00Z',warnings:[],today:{pct:32,sales:100,labour:32},week:{pct:32}};
+const data={version:1,date:'2026-10-13',asOf:'2026-10-13T17:35:00Z',warnings:[],today:{pct:32,sales:100,labour:32},week:{pct:32},lastWeek:{pct:29.8},lastFiveDays:[{date:'2026-10-12',pct:41}]};
 async function test(mode,seed){
  const disk=new Map(seed?[['/library/arch-widget-code-v1.json',JSON.stringify(bundle)]]:[]);let shown,labels=[];
  const element=()=>({addText(s){labels.push(s);return{}},addStack:()=>element(),addSpacer(){},layoutVertically(){},setPadding(){},async presentMedium(){}});
@@ -9,6 +9,7 @@ async function test(mode,seed){
  await vm.runInNewContext('(async()=>{'+source+'})()',ctx);
  assert.ok(shown);return{disk,labels};
 }
+const updated=await test('ok',false);assert.ok(updated.labels.includes('Last week  29.8%'));assert.ok(updated.labels.includes('MON'));assert.ok(!updated.labels.includes('TARGET 32%'));
 assert.ok((await test('ok',false)).disk.has('/library/arch-widget-code-v1.json'));
 for(const mode of ['offline','syntax','runtime'])assert.ok((await test(mode,true)).labels.some(x=>x.includes('SAVED CODE')));
 assert.ok((await test('offline',false)).labels.includes('offline'));

@@ -26,3 +26,7 @@ Run `node tests/labour-widget.test.mjs`. Deployment must include index.ts and ca
 Replace the on-device script with `Arch-Labour-Loader.js`, keeping its name and Home Screen selection. It reuses the existing Keychain token. The authenticated `?asset=widget` endpoint returns a protocol-versioned JS body. The loader executes only this fixed HTTPS source and saves the bundle after it successfully returns a widget. Download/compile/runtime failures fall back to the previous working bundle. An authorization rejection removes the code cache. The saved-code fallback is labelled. First installation requires connectivity.
 
 Edit `widgets/Arch-Labour-Remote.js` to change the widget, regenerate `widget-bundle.mjs` with `python widgets/build-widget-bundle.py VERSION`, then deploy all three Edge Function files together. The loader checks for updates on every execution; iOS controls when Home Screen execution occurs. Source edits alone do not publish: deployment is required. The local loader is trusted to execute authenticated hosted code; never change its host to an untrusted URL. No token is present in the bundle or loader.
+
+### v1.2
+
+Adds the previous full Monday–Sunday week's loaded labour percentage below week-to-date, plus the previous five completed calendar days (oldest to newest) in a compact row. Days without positive net sales show a dash. Removes the target header, retaining existing colour thresholds. The backend fetch window now includes the previous full week; each weekly ratio uses total cost / total net sales.

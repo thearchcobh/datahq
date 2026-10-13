@@ -27,11 +27,11 @@ Deno.serve(async(req:Request)=>{
   if(sync.length!==2||sync.some(s=>!s.last_synced_at))return reply({error:'Awaiting source sync'},503);
   const asOf=new Date(Math.min(...sync.map(s=>Date.parse(s.last_synced_at)))).toISOString(), now=Date.now();
   if(Date.parse(asOf)>now+60000)throw new Error('Invalid source timestamp');
-  const today=day(now), week=monday(today), start=new Date(midnight(addDays(week,-1))).toISOString();
+  const today=day(now), week=monday(today), previousWeek=addDays(week,-7), start=new Date(midnight(addDays(previousWeek,-1))).toISOString();
   const [sales,cards,opening,rates,pension,overrides,settings]=await Promise.all([
-   rows('analytics_sales_lines',{select:'sales_line_id,trading_date,closed_at,sales_ex_vat_eur',closed_at:`gte.${start}`,trading_date:`gte.${week}`,order:'sales_line_id'}),
+   rows('analytics_sales_lines',{select:'sales_line_id,trading_date,closed_at,sales_ex_vat_eur',closed_at:`gte.${start}`,trading_date:`gte.${previousWeek}`,order:'sales_line_id'}),
    rows('square_timecards',{select:'id,team_member_id,start_at,end_at,status,hourly_rate_amount,raw_json',start_at:`gte.${start}`,location_id:'eq.L05Y6CVDJJN86',order:'id'}),
-   rows('analytics_opening_hours_daily',{select:'trading_date,close_next_day',trading_date:`gte.${addDays(week,-1)}`,order:'trading_date'}),
+   rows('analytics_opening_hours_daily',{select:'trading_date,close_next_day',trading_date:`gte.${addDays(previousWeek,-1)}`,order:'trading_date'}),
    rows('analytics_prsi_rates',{select:'*',order:'effective_from'}),
    rows('analytics_pension_default_rates',{select:'*',order:'effective_from'}),
    rows('analytics_employee_cost_overrides',{select:'*',order:'id'}),
