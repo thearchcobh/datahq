@@ -22,7 +22,6 @@ on:
       - "requirements.txt"
   schedule:
     - cron: "43 4 * * *"
-    - cron: "23 5 8 * *"
 
 concurrency:
   group: weather-sync
@@ -32,7 +31,6 @@ jobs:
   era5:
     if: >-
       github.event_name == 'push' ||
-      (github.event_name == 'schedule' && github.event.schedule == '23 5 8 * *') ||
       (github.event_name == 'workflow_dispatch' && (inputs.mode == 'era5' || inputs.mode == 'both'))
     runs-on: ubuntu-latest
     timeout-minutes: 20
