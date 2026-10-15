@@ -12,14 +12,6 @@ on:
           - square
           - revolut
           - all
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: "30 8 * * *"
-      timezone: "Europe/Dublin"
-    - cron: "0,30 9-23 * * *"
-      timezone: "Europe/Dublin"
 
 concurrency:
   group: data-sync
@@ -46,22 +38,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Check today's trading window
-        id: window
-        if: github.event_name == 'schedule'
-        run: python3 -m datahq.sync_window
-
       - name: Set up Python
-        if: steps.window.outputs.run != 'false'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
-        if: steps.window.outputs.run != 'false'
         run: pip install -r requirements.txt
 
       - name: Run sync
-        if: steps.window.outputs.run != 'false'
         run: python -m datahq.main "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source || 'square' }}"
