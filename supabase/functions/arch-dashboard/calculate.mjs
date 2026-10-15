@@ -1,10 +1,15 @@
-export const day = ms => new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Dublin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
+const dayFormatter = new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Dublin',year:'numeric',month:'2-digit',day:'2-digit'});
+const hourFormatter = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Dublin',hour:'2-digit',hourCycle:'h23'});
+const dateCache = new Map(), midnightCache = new Map();
+export const day = ms => {const key=String(ms);if(dateCache.has(key))return dateCache.get(key);const value=dayFormatter.format(new Date(ms));if(dateCache.size>20000)dateCache.clear();dateCache.set(key,value);return value;};
 export const addDays = (d,n) => new Date(Date.parse(d+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
 export function monday(d) { return addDays(d,-((new Date(d+'T12:00:00Z').getUTCDay()+6)%7)); }
 export function midnight(d) {
+  if(midnightCache.has(d))return midnightCache.get(d);
   let t=Date.parse(d+'T00:00:00Z');
-  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Dublin',hour:'2-digit',hourCycle:'h23'}).format(new Date(t));
-  return t-Number(parts)*3600000;
+  const parts=hourFormatter.format(new Date(t));
+  const value=t-Number(parts)*3600000;
+  if(midnightCache.size>1000)midnightCache.clear();midnightCache.set(d,value);return value;
 }
 const effective=(rows,d)=>rows.filter(r=>r.effective_from<=d&&(!r.effective_to||r.effective_to>=d)).sort((a,b)=>b.effective_from.localeCompare(a.effective_from))[0];
 const round=n=>Math.round(n*100)/100;
@@ -15,6 +20,7 @@ export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,
   if(c.status==='DELETED') continue;
   const start=Date.parse(c.start_at), end=Math.min(c.end_at?Date.parse(c.end_at):cutoff,cutoff);
   if(!Number.isFinite(start)||end<=start) continue;
+  if(end<midnight(previousWeek)||start>=midnight(addDays(date,1)))continue;
   if(!c.end_at && end-start>18*3600000) warnings.add('Check an unusually long open shift');
   for(let d=day(start);d<=day(end);d=addDays(d,1)) {
    const a=Math.max(start,midnight(d)), b=Math.min(end,midnight(addDays(d,1)));
