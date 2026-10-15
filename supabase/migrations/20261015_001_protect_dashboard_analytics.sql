@@ -1,0 +1,2 @@
+-- Reporting views are consumed by authenticated server-side functions only.
+revoke all privileges on public.analytics_closed_day_activity, public.analytics_daily_performance, public.analytics_recent_active_product_costs, public.analytics_uncosted_recent_products, public.analytics_labour_day_segments, public.analytics_labour_session_allocations, public.analytics_session_performance, public.analytics_sales_lines from anon, authenticated, public;
