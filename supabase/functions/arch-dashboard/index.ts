@@ -26,7 +26,7 @@ Deno.serve(async(req:Request)=>{
  const required=['square_orders','square_timecards'].map(s=>sync.find(x=>x.source===s)?.last_synced_at);
  if(required.some(x=>!x))return reply({error:'Awaiting Square sync'},503);
  const asOf=new Date(Math.min(...required.map(x=>Date.parse(x)))).toISOString();
- const [sales,cards,opening,rates,pension,overrides,settings,roster,history,uncosted,weather,cruises]=await Promise.all([
+ const [sales,cards,opening,rates,pension,overrides,settings,roster,history,uncosted,weather,cruises,forecastState]=await Promise.all([
  rows('analytics_sales_lines',{select:'sales_line_id,trading_date,closed_at,sales_ex_vat_eur',trading_date:`gte.${start}`,order:'sales_line_id'}),
  rows('square_timecards',{select:'id,team_member_id,job_id,start_at,end_at,status,hourly_rate_amount,raw_json',start_at:`gte.${addDays(today,-90)}T00:00:00Z`,location_id:`eq.${LOCATION}`,order:'start_at.desc,id'}),
  rows('analytics_opening_hours_daily',{select:'*',trading_date:`gte.${addDays(start,-1)}`,order:'trading_date'}),
@@ -35,7 +35,11 @@ Deno.serve(async(req:Request)=>{
  rows('analytics_daily_performance',{select:'trading_date,sales_ex_vat_eur,loaded_labour_cost_eur,opening_hours_modelled',trading_date:`gte.${year}`,order:'trading_date'}),
  rows('analytics_uncosted_recent_products',{select:'variation_id,item_name,variation_name',order:'variation_id'}),
  rows('weather_hourly',{select:'time_utc,temp_c,precip_mm,wind_ms,cloud_pct,source_fetched_at,is_forecast',time_utc:`gte.${start}T00:00:00Z`,order:'time_utc'}),
- rows('cruise_calls',{select:'uid,vessel,port,arrival,departure,passengers,active_in_latest_feed',arrival:`gte.${addDays(start,-7)}T00:00:00Z`,active_in_latest_feed:'eq.true',order:'arrival,uid'})]);
+ rows('cruise_calls',{select:'uid,vessel,port,arrival,departure,passengers,active_in_latest_feed',arrival:`gte.${addDays(start,-7)}T00:00:00Z`,active_in_latest_feed:'eq.true',order:'arrival,uid'}),
+ rows('arch_forecast_current',{select:'payload'})]);
+ const storedForecast=forecastState[0]?.payload;
+ const forecastMap=new Map((storedForecast?.days||[]).map((d:any)=>[d.trading_date,d]));
+ const forecastStale=!storedForecast?.generated_at||now-Date.parse(storedForecast.generated_at)>36*3600000;
  const common={sales,cards,opening,rates,pension,overrides,settings,asOf};
  const actual=new Map();for(let w=0;w<3;w++){const r=calculate({...common,now:Date.parse(addDays(start,w*7+6)+'T12:00:00Z')});for(const d of r.lastFiveDays)actual.set(d.date,d);}
  const upcoming=roster.map(s=>{const draft=s.raw_json?.draft_shift_details,published=s.raw_json?.published_shift_details;const details=draft||published||s;return {...s,...details,draft:!!draft&&JSON.stringify(draft)!==JSON.stringify(published)};}).filter(s=>!s.is_deleted&&s.status!=='DELETED'&&day(s.start_at)>=today&&day(s.start_at)<=end);
@@ -43,8 +47,10 @@ Deno.serve(async(req:Request)=>{
  const projected=new Map();for(let w=0;w<numWeeks;w++){const finish=addDays(start,w*7+6);const r=calculate({...common,cards:[...cards.filter(c=>day(c.start_at)<today),...forecastCards],now:Date.parse(finish+'T12:00:00Z'),asOf:new Date(midnight(addDays(finish,1))).toISOString()});for(const d of r.lastFiveDays)projected.set(d.date,d);}
  const advisories=await advisoriesPromise;
  const result=Array.from({length:numDays},(_,i)=>{const date=addDays(start,i),future=date>=today,shifts=upcoming.filter(s=>day(s.start_at)===date),open=opening.find(x=>x.trading_date===date),closed=open?.is_scheduled_open===false;
- const prior=history.filter(h=>h.trading_date<today&&h.trading_date>=addDays(today,-56)&&new Date(h.trading_date).getUTCDay()===new Date(date).getUTCDay()&&Number(h.sales_ex_vat_eur)>0);
- const forecastSales=closed?0:prior.length>=3?prior.reduce((s,h)=>s+Number(h.sales_ex_vat_eur),0)/prior.length:null;
+ const modelForecast:any=forecastMap.get(date);
+ const planned=modelForecast?.opening;
+ const hoursMatch=planned&&planned.start===open?.open_time&&planned.end===open?.close_time&&planned.open===open?.is_scheduled_open&&planned.next===open?.close_next_day;
+ const forecastSales=closed?0:hoursMatch?modelForecast?.sales??null:null;
  const predictedLabour=shifts.length?projected.get(date)?.labour??null:closed?0:null;
  const predictedAllLabour=shifts.length?projected.get(date)?.allLabour??null:closed?0:null;
  const predictedPct=forecastSales>0&&predictedLabour!=null?predictedLabour/forecastSales*100:null;
@@ -52,7 +58,8 @@ Deno.serve(async(req:Request)=>{
  if(future&&!closed&&!shifts.length)warnings.push('not rostered');
  if(shifts.some(s=>s.draft))warnings.push('Includes draft roster changes');
  if(future&&shifts.length&&predictedAllLabour==null)warnings.push('Missing wage or payroll configuration');
- if(future&&!closed&&forecastSales==null)warnings.push('Not enough comparable sales days to forecast');
+ if(future&&!closed&&forecastSales==null)warnings.push('Forecast unavailable or planned hours changed; awaiting daily refresh');
+ if(future&&forecastStale)warnings.push('Sales forecast is over 36 hours old or unavailable');
  const dayCards=cards.filter(c=>day(c.start_at)===date&&c.status!=='DELETED');
  if(dayCards.some(c=>!c.end_at&&(Date.parse(asOf)-Date.parse(c.start_at)>18*3600000||date<today)))warnings.push('Missing clock-out or unusually long open shift');
  if(dayCards.some(c=>c.hourly_rate_amount==null))warnings.push('Missing hourly wage');
@@ -63,10 +70,10 @@ Deno.serve(async(req:Request)=>{
  let p=date>today?predictedPct:a.pct??null,labour=date>today?predictedLabour:a.labour??null,net=date>today?forecastSales:a.sales??null;
  if(future&&!shifts.length&&!closed){p=null;labour=null;}if(date<today&&!closed&&!dayCards.length)p=null;
  const wx=weather.filter(x=>day(x.time_utc)===date&&x.temp_c!=null);const weatherData=wx.length?{low:Math.min(...wx.map(x=>x.temp_c)),high:Math.max(...wx.map(x=>x.temp_c)),rain:wx.reduce((s,x)=>s+(x.precip_mm||0),0),wind:Math.max(...wx.map(x=>x.wind_ms||0))*3.6,cloud:wx.reduce((s,x)=>s+(x.cloud_pct||0),0)/wx.length,fetched:wx.map(x=>x.source_fetched_at).sort().at(-1)}:null;
- return {date,pct:p,labour,allLabour:date>today?predictedAllLabour:a.allLabour??null,excludedLabour:date>today?projected.get(date)?.excludedLabour??null:a.excludedLabour??null,sales:net,closed,advisories:advisories.items.filter(w=>Date.parse(w.onset)<midnight(addDays(date,1))&&Date.parse(w.expiry)>midnight(date)),mode:date<today?'Actual':date===today?'So far':'Forecast',warnings,forecast:{sales:forecastSales,labour:predictedLabour,allLabour:predictedAllLabour,pct:predictedPct,sampleDays:prior.length},shifts:shifts.map(s=>({start:s.start_at,end:s.end_at,draft:s.draft})),weather:weatherData,cruises:cruises.filter(c=>day(c.arrival)<=date&&day(c.departure||c.arrival)>=date),holiday:holiday(date)};});
+ return {date,pct:p,labour,allLabour:date>today?predictedAllLabour:a.allLabour??null,excludedLabour:date>today?projected.get(date)?.excludedLabour??null:a.excludedLabour??null,sales:net,closed,advisories:advisories.items.filter(w=>Date.parse(w.onset)<midnight(addDays(date,1))&&Date.parse(w.expiry)>midnight(date)),mode:date<today?'Actual':date===today?'So far':'Forecast',warnings,forecast:{sales:forecastSales,labour:predictedLabour,allLabour:predictedAllLabour,pct:predictedPct,model:modelForecast??null},shifts:shifts.map(s=>({start:s.start_at,end:s.end_at,draft:s.draft})),weather:weatherData,cruises:cruises.filter(c=>day(c.arrival)<=date&&day(c.departure||c.arrival)>=date),holiday:holiday(date)};});
  const weeks=Array.from({length:numWeeks},(_,w)=>{const ds=result.slice(w*7,w*7+7);const parts=ds.map(d=>d.date>=today?{sales:d.forecast.sales,allLabour:d.forecast.allLabour,valid:d.closed||d.forecast.pct!=null}:{...d,valid:d.closed||d.pct!=null});const complete=parts.every(d=>d.valid&&d.sales!=null&&d.allLabour!=null);const net=parts.reduce((s,d)=>s+(d.sales||0),0),labour=parts.reduce((s,d)=>s+(d.allLabour||0),0);return {pct:complete&&net>0?100*labour/net:null,complete,warnings:ds.some(d=>d.warnings.length),sales:net,labour};});
  const ytd=history.filter(h=>h.trading_date>=year&&h.trading_date<today&&h.trading_date<day(Date.parse(asOf))),ySales=ytd.reduce((s,h)=>s+Number(h.sales_ex_vat_eur||0),0),yLabour=ytd.reduce((s,h)=>s+Number(h.loaded_labour_cost_eur||0),0);
- const payload={today,start,end,months,asOf,generatedAt:new Date().toISOString(),stale:now-Date.parse(asOf)>5400000,days:result,weeks,ytd:{pct:ySales>0?yLabour/ySales*100:null,sales:ySales,labour:yLabour,through:ytd.at(-1)?.trading_date,estimated:true},uncosted,sync,eventsAvailable:false,advisoriesAvailable:advisories.available,advisoriesFetchedAt:advisories.fetchedAt};cache.set(months,{data:payload,at:Date.now()});return reply(payload);
+ const payload={today,start,end,months,asOf,generatedAt:new Date().toISOString(),stale:now-Date.parse(asOf)>5400000,days:result,weeks,ytd:{pct:ySales>0?yLabour/ySales*100:null,sales:ySales,labour:yLabour,through:ytd.at(-1)?.trading_date,estimated:true},uncosted,sync,eventsAvailable:false,forecastGeneratedAt:storedForecast?.generated_at??null,forecastValidation:storedForecast?.validation??null,advisoriesAvailable:advisories.available,advisoriesFetchedAt:advisories.fetchedAt};cache.set(months,{data:payload,at:Date.now()});return reply(payload);
  }catch(e){console.error(String(e));return reply({error:'Dashboard data temporarily unavailable'},503);}
 });
 function holiday(d:string){const y=Number(d.slice(0,4)),fixed=[`${y}-01-01`,`${y}-03-17`,`${y}-12-25`,`${y}-12-26`];if(fixed.includes(d))return 'Irish public holiday';const nth=(m:number,n:number)=>{const first=new Date(Date.UTC(y,m-1,1));return `${y}-${String(m).padStart(2,'0')}-${String(1+(8-first.getUTCDay())%7+7*(n-1)).padStart(2,'0')}`;};if([nth(5,1),nth(6,1),nth(8,1)].includes(d))return 'Irish public holiday';const feb=new Date(Date.UTC(y,1,1)).getUTCDay()===5?`${y}-02-01`:nth(2,1);if(d===feb)return 'St Brigid’s Day';const lastOct=new Date(Date.UTC(y,9,31));lastOct.setUTCDate(31-(lastOct.getUTCDay()+6)%7);if(d===lastOct.toISOString().slice(0,10))return 'October bank holiday';const a=y%19,b=Math.floor(y/100),c=y%100,e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-Math.floor(b/4)-g+15)%30,k=c%4,l=(32+2*e+2*Math.floor(c/4)-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),dd=(h+l-7*m+114)%31+1;const easter=new Date(Date.UTC(y,month-1,dd+1)).toISOString().slice(0,10);return d===easter?'Easter Monday':null;}

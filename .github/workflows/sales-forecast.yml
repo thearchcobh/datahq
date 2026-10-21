@@ -1,0 +1,38 @@
+name: Refresh sales forecast
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_run:
+    workflows: ['Sync weather', 'Sync cruise calls']
+    types: [completed]
+  push:
+    branches: [main]
+    paths: ['src/datahq/forecast.py', 'src/datahq/forecast_model.py', '.github/workflows/sales-forecast.yml']
+permissions:
+  contents: read
+concurrency:
+  group: sales-forecast
+  cancel-in-progress: false
+jobs:
+  forecast:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: src
+      SUPABASE_URL: https://tqrgwcixxifzdzsphdxj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Test forecast safeguards
+        run: python -m unittest discover -s tests -p 'test_forecast*.py'
+      - name: Refresh daily forecasts
+        run: python -m datahq.forecast
