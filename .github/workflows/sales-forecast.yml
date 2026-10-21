@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '17 6 * * *'
   workflow_run:
-    workflows: ['Sync weather', 'Sync cruise calls']
+    workflows: ['Sync weather', 'Sync cruise calls', 'Sync opening hours']
     types: [completed]
   push:
     branches: [main]
