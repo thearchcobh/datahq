@@ -13,6 +13,9 @@ export function midnight(d) {
 }
 const effective=(rows,d)=>rows.filter(r=>r.effective_from<=d&&(!r.effective_to||r.effective_to>=d)).sort((a,b)=>b.effective_from.localeCompare(a.effective_from))[0];
 const round=n=>Math.round(n*100)/100;
+// ADMIN is also the job used for supplier tastings. Keep these costs in payroll
+// and PRSI thresholds, but exclude them from day-level operational labour.
+export const excludedFromDaily = c => c.job_id==='LVkzRSqcbzS2ZxVYrYAuxMLa' || /^(admin(?:istration)?|tastings?)$/i.test((c.raw_json?.wage?.title||c.job_title||'').trim());
 export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,settings}) {
  const date=day(now), week=monday(date), previousWeek=addDays(week,-7), cutoff=Date.parse(asOf), hours=new Map(opening.map(r=>[r.trading_date,r]));
  const warnings=new Set(), segments=[];
@@ -31,7 +34,7 @@ export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,
    const worked=Math.max(0,b-a-unpaid)/3600000;
    const rate=c.hourly_rate_amount==null?null:Number(c.hourly_rate_amount)/100;
    if(rate==null||!Number.isFinite(rate))warnings.add('Missing hourly wage');
-   segments.push({member:c.team_member_id,d:tradingDate,calendarWeek:monday(d),base:rate==null?null:worked*rate,open:!c.end_at});
+   segments.push({member:c.team_member_id,d:tradingDate,calendarWeek:monday(d),base:rate==null?null:worked*rate,open:!c.end_at,excluded:excludedFromDaily(c)});
   }
  }
  const weekly=new Map();
@@ -45,10 +48,12 @@ export function calculate({asOf,now,sales,cards,opening,rates,pension,overrides,
   const prsi=weekly.get(s.member+s.calendarWeek)<=Number(r.weekly_threshold_eur)?Number(r.lower_employer_rate):Number(r.higher_employer_rate);
   s.cost=s.base*(1+Number(leave))*(1+prsi+Number(o.employer_pension_rate??p?.employer_rate??0)+Number(other));
  }
- function period(from,to=date){
+ function period(from,to=date,daily=false){
   const ss=segments.filter(s=>s.d>=from&&s.d<=to), ls=sales.filter(s=>s.trading_date>=from&&s.trading_date<=to&&Date.parse(s.closed_at)<=cutoff);
-  const net=ls.reduce((n,s)=>n+Number(s.sales_ex_vat_eur),0), cost=ss.some(s=>s.cost==null)?null:ss.reduce((n,s)=>n+s.cost,0);
-  return {sales:round(net),labour:cost==null?null:round(cost),pct:net>0&&cost!=null?round(cost/net*100):null,openShifts:ss.filter(s=>s.open).length};
+  const included=daily?ss.filter(s=>!s.excluded):ss;
+  const sum=items=>items.some(s=>s.cost==null)?null:round(items.reduce((n,s)=>n+s.cost,0));
+  const net=ls.reduce((n,s)=>n+Number(s.sales_ex_vat_eur),0), cost=sum(included);
+  return {sales:round(net),labour:cost,pct:net>0&&cost!=null?round(cost/net*100):null,allLabour:sum(ss),excludedLabour:sum(ss.filter(s=>s.excluded)),openShifts:included.filter(s=>s.open).length};
  }
- return {version:1,date,weekStart:week,asOf,generatedAt:new Date(now).toISOString(),target:32,estimated:true,stale:now-cutoff>90*60000,warnings:[...warnings],today:period(date),week:period(week),lastWeek:{start:previousWeek,end:addDays(week,-1),...period(previousWeek,addDays(week,-1))},lastFiveDays:Array.from({length:14},(_,i)=>{const d=addDays(previousWeek,i);return {date:d,...period(d,d)};})};
+ return {version:2,date,weekStart:week,asOf,generatedAt:new Date(now).toISOString(),target:32,estimated:true,stale:now-cutoff>90*60000,warnings:[...warnings],today:period(date,date,true),week:period(week),lastWeek:{start:previousWeek,end:addDays(week,-1),...period(previousWeek,addDays(week,-1))},lastFiveDays:Array.from({length:14},(_,i)=>{const d=addDays(previousWeek,i);return {date:d,...period(d,d,true)};})};
 }
