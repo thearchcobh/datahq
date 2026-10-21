@@ -1,4 +1,5 @@
 import {calculate,day,monday,addDays,midnight} from './calculate.mjs';
+import {costRoster} from './roster.mjs';
 import {getWarnings} from './warnings.mjs';
 // A dedicated read-only dashboard credential; plaintext is never committed.
 const TOKEN_HASH = 'c0c4761c916121fb5f35090181f485f0929e8bcf8aa0dd49151caaefa2e52564';
@@ -42,8 +43,8 @@ Deno.serve(async(req:Request)=>{
  const forecastStale=!storedForecast?.generated_at||now-Date.parse(storedForecast.generated_at)>36*3600000;
  const common={sales,cards,opening,rates,pension,overrides,settings,asOf};
  const actual=new Map();for(let w=0;w<3;w++){const r=calculate({...common,now:Date.parse(addDays(start,w*7+6)+'T12:00:00Z')});for(const d of r.lastFiveDays)actual.set(d.date,d);}
- const upcoming=roster.map(s=>{const draft=s.raw_json?.draft_shift_details,published=s.raw_json?.published_shift_details;const details=draft||published||s;return {...s,...details,draft:!!draft&&JSON.stringify(draft)!==JSON.stringify(published)};}).filter(s=>!s.is_deleted&&s.status!=='DELETED'&&day(s.start_at)>=today&&day(s.start_at)<=end);
- const forecastCards=upcoming.map(s=>{const wage=cards.find(c=>c.team_member_id===s.team_member_id&&c.job_id===s.job_id&&c.hourly_rate_amount!=null);return {...s,hourly_rate_amount:wage?.hourly_rate_amount??null,raw_json:{breaks:[],wage:wage?.raw_json?.wage},status:'CLOSED'};});
+ const upcoming=roster.map(s=>{const draft=s.raw_json?.draft_shift_details,published=s.raw_json?.published_shift_details;const details=draft||published||s;return {...s,...details,team_member_id:details.team_member_id||null,draft:!!draft&&JSON.stringify(draft)!==JSON.stringify(published)};}).filter(s=>!s.is_deleted&&s.status!=='DELETED'&&day(s.start_at)>=today&&day(s.start_at)<=end);
+ const forecastCards=costRoster(upcoming,cards);
  const projected=new Map();for(let w=0;w<numWeeks;w++){const finish=addDays(start,w*7+6);const r=calculate({...common,cards:[...cards.filter(c=>day(c.start_at)<today),...forecastCards],now:Date.parse(finish+'T12:00:00Z'),asOf:new Date(midnight(addDays(finish,1))).toISOString()});for(const d of r.lastFiveDays)projected.set(d.date,d);}
  const advisories=await advisoriesPromise;
  const result=Array.from({length:numDays},(_,i)=>{const date=addDays(start,i),future=date>=today,shifts=upcoming.filter(s=>day(s.start_at)===date),open=opening.find(x=>x.trading_date===date),closed=open?.is_scheduled_open===false;
@@ -56,6 +57,8 @@ Deno.serve(async(req:Request)=>{
  const predictedPct=forecastSales>0&&predictedLabour!=null?predictedLabour/forecastSales*100:null;
  const a:any=actual.get(date)||{},warnings:string[]=[];
  if(future&&!closed&&!shifts.length)warnings.push('not rostered');
+ const estimates=forecastCards.filter(s=>day(s.start_at)===date&&s.wage_estimated);
+ if(estimates.length)warnings.push('Unassigned shifts use estimated average wages: '+[...new Set(estimates.map(s=>'€'+(s.hourly_rate_amount/100).toFixed(2)+'/hour ('+s.wage_basis+')'))].join(', '));
  if(shifts.some(s=>s.draft))warnings.push('Includes draft roster changes');
  if(future&&shifts.length&&predictedAllLabour==null)warnings.push('Missing wage or payroll configuration');
  if(future&&!closed&&forecastSales==null)warnings.push('Forecast unavailable or planned hours changed; awaiting daily refresh');
